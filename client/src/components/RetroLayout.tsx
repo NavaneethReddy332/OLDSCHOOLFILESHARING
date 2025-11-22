@@ -33,7 +33,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
           
           <tr style={{ verticalAlign: "top" }}>
             {/* Sidebar */}
-            <td width="180">
+            <td width="140">
               <table width="100%" border={1} cellPadding={5} className="bg-gray-200 border-gray-400">
                 <tbody>
                   <tr>
@@ -62,6 +62,31 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                   </tr>
                 </tbody>
               </table>
+
+              <br />
+
+              {/* Hacking Terminal Section */}
+              <div className="bg-black text-green-500 font-mono text-[10px] p-1 border-2 border-gray-600 border-inset h-48 overflow-hidden font-bold relative">
+                <div className="border-b border-green-900 pb-1 mb-1 text-center bg-green-900/20">ROOT_ACCESS</div>
+                <div className="opacity-90 leading-tight">
+                  <span className="text-green-300">root@retro:~#</span> ./init_upload<br/>
+                  > MOUNTING_DRIVE... OK<br/>
+                  > BYPASSING_FIREWALL...<br/>
+                  > ENCRYPTION: 128-BIT<br/>
+                  > PORT: 8080 [OPEN]<br/>
+                  > PACKETS: 4092/4092<br/>
+                  > HASH: <span className="text-yellow-400">0x9F2A1</span><br/>
+                  <br/>
+                  <span className="text-green-300">root@retro:~#</span> gen_key<br/>
+                  > KEY GENERATED:<br/>
+                  <span className="bg-green-900 text-white px-1">X7-K9-M2</span><br/>
+                  <br/>
+                  <span className="text-green-300">root@retro:~#</span> <span className="animate-pulse">_</span>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-green-900/10 p-1 text-center border-t border-green-900/30">
+                   STATUS: ONLINE
+                </div>
+              </div>
               
               <br />
               
