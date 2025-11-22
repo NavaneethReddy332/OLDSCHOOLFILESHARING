@@ -1,12 +1,20 @@
 import { useLocation } from "wouter";
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { RetroLayout } from "../components/RetroLayout";
 import { useTerminal } from "../context/TerminalContext";
+import { RetroProgressBar } from "../components/RetroProgressBar";
+import { RetroPopup } from "../components/RetroPopup";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [showPopup, setShowPopup] = useState<{isOpen: boolean, title: string, msg: string, type: 'info' | 'error' | 'warning'}>({
+    isOpen: false, title: "", msg: "", type: 'info'
+  });
+
   const { addLog } = useTerminal();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -22,32 +30,43 @@ export default function Home() {
     if (!file) return;
     
     setIsUploading(true);
+    setUploadProgress(0);
     addLog(`INITIATING_UPLOAD: ${file.name}...`);
     
-    const startTime = Date.now();
-    const minUploadTime = 3000; // 3 seconds minimum
-    
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      if (Math.random() > 0.7) {
-        addLog(`PACKET_TRANSFER: ${Math.floor(Math.random() * 100)}% COMPLETE...`);
-      }
-    }, 800);
-
-    // Determine total upload time based on size (fake)
+    const minUploadTime = 3000;
     const uploadTime = Math.max(minUploadTime, Math.min(10000, file.size / 100));
+    const startTime = Date.now();
 
-    setTimeout(() => {
-      clearInterval(interval);
-      const fakeCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      addLog(`UPLOAD_COMPLETE: 100%`);
-      addLog(`GENERATING_HASH... OK`);
-      addLog(`SECURE_CODE: ${fakeCode}`);
-      
-      setIsUploading(false);
-      setLocation(`/result/${fakeCode}`);
-    }, uploadTime);
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(100, (elapsed / uploadTime) * 100);
+      setUploadProgress(progress);
+
+      if (Math.random() > 0.85) {
+        addLog(`PACKET_TRANSFER: ${Math.floor(progress)}% COMPLETE...`);
+      }
+
+      if (progress >= 100) {
+        clearInterval(interval);
+        const fakeCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        addLog(`UPLOAD_COMPLETE: 100%`);
+        addLog(`GENERATING_HASH... OK`);
+        
+        // Simulate code generation delay
+        setTimeout(() => {
+          addLog(`SECURE_CODE: ${fakeCode}`);
+          setGeneratedCode(fakeCode);
+          setIsUploading(false);
+          setShowPopup({
+             isOpen: true,
+             title: "Upload Successful",
+             msg: "File successfully transmitted to server. Click OK to view details.",
+             type: "info"
+          });
+        }, 1000);
+      }
+    }, 100);
   };
 
   const [downloadCode, setDownloadCode] = useState("");
@@ -59,12 +78,32 @@ export default function Home() {
       setLocation(`/download/${downloadCode}`);
     } else {
       addLog(`ERROR: INVALID_CODE_FORMAT`, "error");
-      alert("Please enter a valid 6-digit code.");
+      setShowPopup({
+        isOpen: true,
+        title: "Invalid Code",
+        msg: "The code you entered is invalid. It must be exactly 6 digits.",
+        type: "error"
+      });
+    }
+  };
+
+  const handlePopupClose = () => {
+    setShowPopup(prev => ({ ...prev, isOpen: false }));
+    if (generatedCode) {
+      setLocation(`/result/${generatedCode}`);
     }
   };
 
   return (
     <RetroLayout>
+      <RetroPopup 
+        isOpen={showPopup.isOpen} 
+        onClose={handlePopupClose}
+        title={showPopup.title}
+        message={showPopup.msg}
+        type={showPopup.type}
+      />
+
       <center>
         <h2><span style={{ color: "red" }}>Upload Files Now!</span></h2>
         <p>Share files with your friends easily. No registration required.</p>
@@ -76,6 +115,15 @@ export default function Home() {
         <tbody>
           <tr>
             <td width="50%" valign="top">
+              <pre className="text-[10px] font-mono leading-none mb-2">
+{`
+ ____  _       _             
+|  _ \\(_) __ _| |_ ___  _ __ 
+| |_) | |/ _\` | __/ _ \\| '__|
+|  _ <| | (_| | || (_) | |   
+|_| \\_\\_|\\__,_|\\__\\___/|_|   
+`}
+              </pre>
               <form onSubmit={(e) => e.preventDefault()}>
                 <b>Step 1: Select File</b><br /><br />
                 <input 
@@ -85,13 +133,22 @@ export default function Home() {
                 /><br /><br />
                 
                 <b>Step 2: Upload</b><br /><br />
-                <button 
-                  onClick={handleUpload}
-                  disabled={!file || isUploading}
-                  className="retro-button"
-                >
-                  {isUploading ? "Uploading..." : "Upload Now >>"}
-                </button>
+                
+                {isUploading ? (
+                  <div>
+                    <RetroProgressBar progress={uploadProgress} label="Uploading via 56k modem..." />
+                    <br />
+                    <center className="blink text-xs text-blue-800">Transmitting Data...</center>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={handleUpload}
+                    disabled={!file}
+                    className="retro-button"
+                  >
+                    Upload Now &gt;&gt;
+                  </button>
+                )}
               </form>
             </td>
             <td width="50%" valign="top" className="border-l-2 border-gray-400 pl-4">

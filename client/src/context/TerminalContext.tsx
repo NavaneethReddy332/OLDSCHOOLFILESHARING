@@ -18,26 +18,7 @@ interface TerminalContextType {
 const TerminalContext = createContext<TerminalContextType | undefined>(undefined);
 
 export function TerminalProvider({ children }: { children: React.ReactNode }) {
-  const [logs, setLogs] = useState<LogEntry[]>([
-    {
-      id: "init-1",
-      timestamp: new Date().toLocaleTimeString(),
-      message: "SYSTEM_INIT... OK",
-      type: "system",
-    },
-    {
-      id: "init-2",
-      timestamp: new Date().toLocaleTimeString(),
-      message: "MOUNTING_VIRTUAL_DRIVE... OK",
-      type: "system",
-    },
-    {
-      id: "init-3",
-      timestamp: new Date().toLocaleTimeString(),
-      message: "ESTABLISHING_SECURE_CONNECTION...",
-      type: "system",
-    },
-  ]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const addLog = useCallback((message: string, type: LogType = "info") => {
     setLogs((prev) => [

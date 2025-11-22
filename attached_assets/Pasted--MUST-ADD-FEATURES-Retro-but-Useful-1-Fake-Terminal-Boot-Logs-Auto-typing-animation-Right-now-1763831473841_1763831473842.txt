@@ -1,0 +1,167 @@
+✅ MUST-ADD FEATURES (Retro but Useful)
+1. Fake Terminal Boot Logs (Auto-typing animation)
+
+Right now it’s static. Make it type automatically:
+
+SYSTEM INIT… OK
+
+LOADING MODem DRIVER… OK
+
+CONNECTING TO 56K GATEWAY… OK
+
+WAITING FOR INPUT… _
+
+Add blinking green cursor
+Add keypress sound effect (optional)
+
+This alone will boost the retro feeling ×10.
+
+2. Retro Progress Bar During Upload
+
+Think Windows 98 / XP loading bar:
+
+Green pixelated stripes
+
+Slow smooth loop
+
+A caption: “Uploading via 56k modem…”
+
+Add 8-bit sound optional
+
+3. Auto-Generated 6-Digit Code Animation
+
+When user uploads, show:
+
+Generating Access Code...
+████░░░░░░ 42%
+██████████ 100%
+CODE: 742981
+
+
+Feels hackerish + retro.
+
+4. Retro Pop-Up Notifications
+
+Instead of modern toasts, use “Windows 98 style message boxes”:
+
+Grey box
+
+Blue title bar
+
+OK / Cancel buttons
+
+Example popups:
+
+“UPLOAD SUCCESSFUL!”
+
+“INVALID CODE. TRY AGAIN.”
+
+“FILE EXPIRED AFTER 24 HOURS.”
+
+5. CRT Monitor Screen Effect
+
+Add a VERY subtle:
+
+scanlines
+
+tiny flicker
+
+slight screen glow
+
+Don’t overdo it. Just 2% opacity.
+Instant retro-computer feeling.
+
+6. ASCII Logos for Different Sections
+
+Like:
+
+ ____  _       _             
+|  _ \(_) __ _| |_ ___  _ __ 
+| |_) | |/ _` | __/ _ \| '__|
+|  _ <| | (_| | || (_) | |   
+|_| \_\_|\__,_|\__\___/|_|   
+
+
+Put this above “Upload File” column.
+
+7. Add a “Retro Stats Panel”
+
+At bottom:
+
+Total files shared
+
+Server uptime
+
+Memory usage (fake)
+
+Visitors online
+
+Make it look like a 1998 status bar.
+
+8. Add a “Dark Terminal Mode” Toggle
+
+One button:
+
+Switch to Hacker Mode
+
+Background turns #000
+Green text
+ASCII layout
+CRT effect stronger
+
+9. Easter Eggs (Very Retro)
+
+When someone clicks 3× on logo:
+
+Show old “Netscape Loading” animation
+
+Play dialing modem sound
+
+Show hidden message:
+“WELCOME TO RETROSEND BETA VERSION 0.9”
+
+10. Retro Advert Box on Right
+
+But keep it simple:
+
+GIF animations
+
+Geocities style
+
+Classic “Under Construction” GIF
+
+Old “Download Netscape Navigator” badge
+
+🎨 ANIMATION Suggestions (but keep retro limits)
+✓ Pixel Fade Animations
+
+Elements appear using:
+
+Fade-in
+
+Zoom-in 1–2 pixels
+
+Slide from left 2px
+
+NO modern smooth 500ms transitions.
+Use small jerky steps (80ms × 4 frames).
+
+✓ Menu Hover Effects
+
+Old-school:
+
+Underline grows from center
+
+Text changes from black → dark blue
+
+Slight pixel jump on hover
+
+✓ Button Press Effect
+
+Like Windows 98:
+
+Border inwards
+
+Looks “pressed”
+
+Instant click feel
