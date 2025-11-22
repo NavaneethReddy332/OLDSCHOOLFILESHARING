@@ -1,10 +1,18 @@
 import { useLocation, useRoute } from "wouter";
 import { RetroLayout } from "../components/RetroLayout";
+import { useTerminal } from "../context/TerminalContext";
+import { useEffect } from "react";
 
 export default function UploadResult() {
   const [, params] = useRoute("/result/:code");
   const code = params?.code || "000000";
   const [, setLocation] = useLocation();
+  const { addLog } = useTerminal();
+
+  useEffect(() => {
+     addLog(`FILE_STORED_AT: /var/www/uploads/${code}`);
+     addLog(`EXPIRY_SET: 24_HOURS`);
+  }, [code]);
 
   return (
     <RetroLayout>

@@ -1,15 +1,20 @@
 import { useLocation } from "wouter";
 import { useState, useRef } from "react";
 import { RetroLayout } from "../components/RetroLayout";
+import { useTerminal } from "../context/TerminalContext";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { addLog } = useTerminal();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      addLog(`SELECTED_FILE: ${selectedFile.name}`);
+      addLog(`SIZE: ${(selectedFile.size / 1024).toFixed(2)} KB`);
     }
   };
 
@@ -17,14 +22,32 @@ export default function Home() {
     if (!file) return;
     
     setIsUploading(true);
+    addLog(`INITIATING_UPLOAD: ${file.name}...`);
     
-    // Simulate network delay for upload
+    const startTime = Date.now();
+    const minUploadTime = 3000; // 3 seconds minimum
+    
+    // Simulate upload progress
+    const interval = setInterval(() => {
+      if (Math.random() > 0.7) {
+        addLog(`PACKET_TRANSFER: ${Math.floor(Math.random() * 100)}% COMPLETE...`);
+      }
+    }, 800);
+
+    // Determine total upload time based on size (fake)
+    const uploadTime = Math.max(minUploadTime, Math.min(10000, file.size / 100));
+
     setTimeout(() => {
-      // Mock upload success - navigate to result with a fake code
+      clearInterval(interval);
       const fakeCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      addLog(`UPLOAD_COMPLETE: 100%`);
+      addLog(`GENERATING_HASH... OK`);
+      addLog(`SECURE_CODE: ${fakeCode}`);
+      
       setIsUploading(false);
       setLocation(`/result/${fakeCode}`);
-    }, 2000);
+    }, uploadTime);
   };
 
   const [downloadCode, setDownloadCode] = useState("");
@@ -32,8 +55,10 @@ export default function Home() {
   const handleDownloadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (downloadCode.length === 6) {
+      addLog(`SEARCH_REQUEST: ${downloadCode}`);
       setLocation(`/download/${downloadCode}`);
     } else {
+      addLog(`ERROR: INVALID_CODE_FORMAT`, "error");
       alert("Please enter a valid 6-digit code.");
     }
   };

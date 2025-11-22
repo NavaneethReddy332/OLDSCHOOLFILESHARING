@@ -1,10 +1,20 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useTerminal } from '../context/TerminalContext';
 
 interface RetroLayoutProps {
   children: React.ReactNode;
 }
 
 export function RetroLayout({ children }: RetroLayoutProps) {
+  const { logs } = useTerminal();
+  const terminalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [logs]);
+
   return (
     <div className="min-h-screen p-2 w-full bg-[#c0c0c0] overflow-x-hidden">
       <table width="100%" border={0} cellPadding={5} style={{ tableLayout: "fixed" }}>
@@ -66,24 +76,22 @@ export function RetroLayout({ children }: RetroLayoutProps) {
               <br />
 
               {/* Hacking Terminal Section */}
-              <div className="bg-black text-green-500 font-mono text-[10px] p-1 border-2 border-gray-600 border-inset h-48 overflow-hidden font-bold relative">
-                <div className="border-b border-green-900 pb-1 mb-1 text-center bg-green-900/20">ROOT_ACCESS</div>
-                <div className="opacity-90 leading-tight">
-                  <span className="text-green-300">root@retro:~#</span> ./init_upload<br/>
-                  &gt; MOUNTING_DRIVE... OK<br/>
-                  &gt; BYPASSING_FIREWALL...<br/>
-                  &gt; ENCRYPTION: 128-BIT<br/>
-                  &gt; PORT: 8080 [OPEN]<br/>
-                  &gt; PACKETS: 4092/4092<br/>
-                  &gt; HASH: <span className="text-yellow-400">0x9F2A1</span><br/>
-                  <br/>
-                  <span className="text-green-300">root@retro:~#</span> gen_key<br/>
-                  &gt; KEY GENERATED:<br/>
-                  <span className="bg-green-900 text-white px-1">X7-K9-M2</span><br/>
-                  <br/>
-                  <span className="text-green-300">root@retro:~#</span> <span className="animate-pulse">_</span>
+              <div 
+                ref={terminalRef}
+                className="bg-black text-green-500 font-mono text-[10px] p-1 border-2 border-gray-600 border-inset h-48 overflow-y-auto font-bold relative scrollbar-hide"
+              >
+                <div className="border-b border-green-900 pb-1 mb-1 text-center bg-green-900/20 sticky top-0 backdrop-blur-sm">ROOT_ACCESS</div>
+                <div className="opacity-90 leading-tight pb-6">
+                  {logs.map((log) => (
+                    <div key={log.id}>
+                      <span className="text-green-300">root@retro:~#</span> {log.message}
+                    </div>
+                  ))}
+                  <div className="mt-1">
+                    <span className="text-green-300">root@retro:~#</span> <span className="animate-pulse">_</span>
+                  </div>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 bg-green-900/10 p-1 text-center border-t border-green-900/30">
+                <div className="fixed bottom-0 left-0 right-0 bg-green-900/10 p-1 text-center border-t border-green-900/30 pointer-events-none">
                    STATUS: ONLINE
                 </div>
               </div>

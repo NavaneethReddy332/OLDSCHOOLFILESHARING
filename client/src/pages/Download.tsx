@@ -1,11 +1,13 @@
 import { useLocation, useRoute } from "wouter";
 import { useState, useEffect } from "react";
 import { RetroLayout } from "../components/RetroLayout";
+import { useTerminal } from "../context/TerminalContext";
 
 export default function Download() {
   const [, params] = useRoute("/download/:code");
   const code = params?.code;
   const [, setLocation] = useLocation();
+  const { addLog } = useTerminal();
   
   const [inputCode, setInputCode] = useState("");
   const [status, setStatus] = useState<'input' | 'searching' | 'found' | 'error'>('input');
@@ -13,12 +15,18 @@ export default function Download() {
   useEffect(() => {
     if (code) {
       setStatus('searching');
+      addLog(`CONNECTING_TO_DB...`);
+      addLog(`QUERY: SELECT * FROM FILES WHERE CODE='${code}'`);
+      
       // Simulate searching
       setTimeout(() => {
         if (code === "999999") {
           setStatus('error'); // Simulating expired/not found
+          addLog(`ERROR: FILE_NOT_FOUND_OR_EXPIRED`, 'error');
         } else {
           setStatus('found');
+          addLog(`SUCCESS: FILE_LOCATED`);
+          addLog(`DECRYPTING_METADATA... OK`);
         }
       }, 1500);
     } else {
@@ -28,11 +36,17 @@ export default function Download() {
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    addLog(`USER_INPUT: ${inputCode}`);
     setLocation(`/download/${inputCode}`);
   };
 
   const handleDownload = () => {
+    addLog(`INITIATING_DOWNLOAD_STREAM...`);
+    addLog(`BUFFERING...`);
     alert("Starting download... (simulated)");
+    setTimeout(() => {
+        addLog(`DOWNLOAD_COMPLETE`);
+    }, 1000);
   };
 
   return (
