@@ -50,9 +50,9 @@ export function RetroLayout({ children }: RetroLayoutProps) {
           
           <tr style={{ verticalAlign: "top" }}>
             {/* Sidebar */}
-            <td width="140">
+            <td width="120">
               {/* Replaced Menu with Video */}
-              <div className="border-2 border-gray-600 border-inset bg-black mb-4 relative overflow-hidden h-[105px]">
+              <div className="border-2 border-gray-600 border-inset bg-black mb-4 relative overflow-hidden h-[90px]">
                 <video 
                   src={generatedVideo} 
                   autoPlay 
@@ -69,7 +69,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
               {/* Hacking Terminal Section */}
               <div 
                 ref={terminalRef}
-                className="bg-black text-green-500 font-mono text-[10px] p-1 border-2 border-gray-600 border-inset h-48 overflow-y-auto font-bold relative scrollbar-hide"
+                className="bg-black text-green-500 font-mono text-[9px] p-1 border-2 border-gray-600 border-inset h-48 overflow-y-auto font-bold relative scrollbar-hide"
               >
                 <div className="border-b border-green-900 pb-1 mb-1 text-center bg-green-900/20 sticky top-0 backdrop-blur-sm">ROOT_ACCESS</div>
                 <div className="opacity-90 leading-tight pb-6">
@@ -89,7 +89,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
               
               <br />
               
-              <div className="text-center border-2 border-gray-400 p-1 bg-black text-green-500 font-retro">
+              <div className="text-center border-2 border-gray-400 p-1 bg-black text-green-500 font-retro text-xs">
                 VISITORS: 003482
               </div>
             </td>
