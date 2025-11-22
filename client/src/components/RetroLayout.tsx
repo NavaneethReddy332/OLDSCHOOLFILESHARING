@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useTerminal } from '../context/TerminalContext';
+import generatedVideo from '@assets/generated_videos/retro_90s_computer_interface_with_scrolling_code_and_glitch_effects.mp4';
 
 interface RetroLayoutProps {
   children: React.ReactNode;
@@ -19,20 +20,26 @@ export function RetroLayout({ children }: RetroLayoutProps) {
     <div className="min-h-screen p-2 w-full bg-[#c0c0c0] overflow-x-hidden">
       <table width="100%" border={0} cellPadding={5} style={{ tableLayout: "fixed" }}>
         <tbody>
+          {/* Floating Header with Menu */}
+          <tr>
+            <td colSpan={2} align="center" className="pb-4">
+              <div className="bg-[#000080] border-2 border-white border-outset p-2 flex items-center justify-between text-white font-bold shadow-md">
+                <div className="flex items-center gap-4">
+                   <span className="text-xl font-retro tracking-widest text-yellow-300">RETROSEND_V1.0</span>
+                </div>
+                
+                <div className="flex gap-4 text-sm font-sans">
+                   <a href="/" className="text-white hover:text-yellow-300 no-underline hover:underline">[ HOME ]</a>
+                   <a href="/upload" className="text-white hover:text-yellow-300 no-underline hover:underline">[ UPLOAD ]</a>
+                   <a href="/download" className="text-white hover:text-yellow-300 no-underline hover:underline">[ DOWNLOAD ]</a>
+                   <a href="#" className="text-white hover:text-yellow-300 no-underline hover:underline">[ GUESTBOOK ]</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+
           <tr>
             <td colSpan={2} align="center">
-              <div className="overflow-hidden">
-                <pre className="font-retro text-xs sm:text-sm md:text-base whitespace-pre text-blue-900 font-bold leading-none mb-4 inline-block">
-{`
- ____  _____ _____ ____  _____ ____  _____ _   _ ____  
-|  _ \\| ____|_   _|  _ \\|  _  / ___|| ____| \\ | |  _ \\ 
-| |_) |  _|   | | | |_) | | | \\___ \\|  _| |  \\| | | | |
-|  _ <| |___  | | |  _ <| |_| |___) | |___| |\\  | |_| |
-|_| \\_\\_____| |_| |_| \\_\\_____|____/|_____|_| \\_|____/ 
-                                                       
-`}
-                </pre>
-              </div>
               <div className="bg-blue-900 text-white p-1 mb-4 font-bold font-sans text-center marquee-container border-2 border-white border-inset">
                  <div className="marquee-content">
                    WELCOME TO RETROSEND *** UPLOAD FILES FAST *** NO LOGS *** 100% FREE *** BEST VIEWED IN NETSCAPE NAVIGATOR 4.0
@@ -44,36 +51,20 @@ export function RetroLayout({ children }: RetroLayoutProps) {
           <tr style={{ verticalAlign: "top" }}>
             {/* Sidebar */}
             <td width="140">
-              <table width="100%" border={1} cellPadding={5} className="bg-gray-200 border-gray-400">
-                <tbody>
-                  <tr>
-                    <td style={{ backgroundColor: "#000080" }} className="text-white font-bold text-center font-sans text-sm">
-                      MENU
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <ul className="list-disc list-inside text-sm">
-                        <li><a href="/">Home</a></li>
-                        <li><a href="/upload">Upload File</a></li>
-                        <li><a href="/download">Download</a></li>
-                        <li><a href="#">Guestbook</a></li>
-                        <li><a href="#">Webring</a></li>
-                        <li><a href="#">Email Us</a></li>
-                      </ul>
-                    </td>
-                  </tr>
-                  <tr>
-                     <td align="center" className="pt-4">
-                       <img src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeDdlZHBzcmVwdmQzYjR6YjR6YjR6YjR6YjR6YjR6YjR6YjR6eSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/Lp41w2lKxYfQs/giphy.gif" alt="Construction" width="50" />
-                       <br />
-                       <span className="text-xs">Under Construction</span>
-                     </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <br />
+              {/* Replaced Menu with Video */}
+              <div className="border-2 border-gray-600 border-inset bg-black mb-4 relative overflow-hidden h-[105px]">
+                <video 
+                  src={generatedVideo} 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline
+                  className="w-full h-full object-cover opacity-80"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[9px] text-green-500 text-center font-mono p-0.5">
+                  LIVE_FEED_CAM_01
+                </div>
+              </div>
 
               {/* Hacking Terminal Section */}
               <div 
@@ -88,7 +79,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                     </div>
                   ))}
                   <div className="mt-1">
-                    <span className="text-green-300">root@retro:~#</span> <span className="animate-pulse">_</span>
+                    <span className="text-green-300">root@retro:~#</span> <span className="animate-pulse inline-block w-2 h-3 bg-green-500 align-middle ml-1"></span>
                   </div>
                 </div>
                 <div className="fixed bottom-0 left-0 right-0 bg-green-900/10 p-1 text-center border-t border-green-900/30 pointer-events-none">
