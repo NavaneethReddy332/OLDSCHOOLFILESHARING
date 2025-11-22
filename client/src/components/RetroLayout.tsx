@@ -70,15 +70,15 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                 <div className="border-b border-green-900 pb-1 mb-1 text-center bg-green-900/20">ROOT_ACCESS</div>
                 <div className="opacity-90 leading-tight">
                   <span className="text-green-300">root@retro:~#</span> ./init_upload<br/>
-                  > MOUNTING_DRIVE... OK<br/>
-                  > BYPASSING_FIREWALL...<br/>
-                  > ENCRYPTION: 128-BIT<br/>
-                  > PORT: 8080 [OPEN]<br/>
-                  > PACKETS: 4092/4092<br/>
-                  > HASH: <span className="text-yellow-400">0x9F2A1</span><br/>
+                  &gt; MOUNTING_DRIVE... OK<br/>
+                  &gt; BYPASSING_FIREWALL...<br/>
+                  &gt; ENCRYPTION: 128-BIT<br/>
+                  &gt; PORT: 8080 [OPEN]<br/>
+                  &gt; PACKETS: 4092/4092<br/>
+                  &gt; HASH: <span className="text-yellow-400">0x9F2A1</span><br/>
                   <br/>
                   <span className="text-green-300">root@retro:~#</span> gen_key<br/>
-                  > KEY GENERATED:<br/>
+                  &gt; KEY GENERATED:<br/>
                   <span className="bg-green-900 text-white px-1">X7-K9-M2</span><br/>
                   <br/>
                   <span className="text-green-300">root@retro:~#</span> <span className="animate-pulse">_</span>
