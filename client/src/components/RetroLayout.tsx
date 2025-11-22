@@ -31,7 +31,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
           
           <tr style={{ verticalAlign: "top" }}>
             {/* Sidebar */}
-            <td width="180" className="hidden sm:table-cell">
+            <td width="180">
               <table width="100%" border={1} cellPadding={5} className="bg-gray-200 border-gray-400">
                 <tbody>
                   <tr>
