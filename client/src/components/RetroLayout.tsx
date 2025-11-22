@@ -6,12 +6,13 @@ interface RetroLayoutProps {
 
 export function RetroLayout({ children }: RetroLayoutProps) {
   return (
-    <div className="min-h-screen p-2 max-w-[800px] mx-auto bg-[#c0c0c0]">
-      <table width="100%" border={0} cellPadding={5}>
+    <div className="min-h-screen p-2 w-full bg-[#c0c0c0] overflow-x-hidden">
+      <table width="100%" border={0} cellPadding={5} style={{ tableLayout: "fixed" }}>
         <tbody>
           <tr>
             <td colSpan={2} align="center">
-              <pre className="font-retro text-xs sm:text-sm md:text-base whitespace-pre text-blue-900 font-bold leading-none mb-4">
+              <div className="overflow-hidden">
+                <pre className="font-retro text-xs sm:text-sm md:text-base whitespace-pre text-blue-900 font-bold leading-none mb-4 inline-block">
 {`
  ____  _____ _____ ____  _____ ____  _____ _   _ ____  
 |  _ \\| ____|_   _|  _ \\|  _  / ___|| ____| \\ | |  _ \\ 
@@ -20,7 +21,8 @@ export function RetroLayout({ children }: RetroLayoutProps) {
 |_| \\_\\_____| |_| |_| \\_\\_____|____/|_____|_| \\_|____/ 
                                                        
 `}
-              </pre>
+                </pre>
+              </div>
               <div className="bg-blue-900 text-white p-1 mb-4 font-bold font-sans text-center marquee-container border-2 border-white border-inset">
                  <div className="marquee-content">
                    WELCOME TO RETROSEND *** UPLOAD FILES FAST *** NO LOGS *** 100% FREE *** BEST VIEWED IN NETSCAPE NAVIGATOR 4.0
