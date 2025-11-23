@@ -19,6 +19,9 @@
     --text-secondary: #5c4a33;
     --accent: #8b5e34;
     --accent-hover: #a67347;
+    --header-bg: #8b5e34;
+    --header-border: #fff2c7;
+    --header-text: #fff2c7;
     --input-bg: #ffffff;
     --terminal-bg: #1a1a1a;
     --terminal-text: #00ff00;
@@ -39,6 +42,9 @@
     --text-secondary: #b99dd6;
     --accent: #a87bff;
     --accent-hover: #c299ff;
+    --header-bg: #3d2252;
+    --header-border: #a87bff;
+    --header-text: #e8d4ff;
     --input-bg: #2a153d;
     --terminal-bg: #0d0614;
     --terminal-text: #8affb3;

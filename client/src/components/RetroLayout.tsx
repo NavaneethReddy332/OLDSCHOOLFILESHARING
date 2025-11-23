@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { useTerminal } from '../context/TerminalContext';
 import { useTheme } from './ThemeProvider';
+import { Moon, Sun } from 'lucide-react';
 import generatedVideo from '@assets/generated_videos/retro_90s_computer_interface_with_scrolling_code_and_glitch_effects.mp4';
 
 interface RetroLayoutProps {
@@ -24,9 +25,9 @@ export function RetroLayout({ children }: RetroLayoutProps) {
     <div className="min-h-screen p-2 sm:p-4 w-full" style={{ backgroundColor: 'var(--surface)' }}>
       {/* Header */}
       <header className="mb-4">
-        <div className="bg-[#000080] dark:bg-[#2a0a52] border-2 border-white dark:border-[#5e3d8f] p-3 sm:p-4 flex items-center justify-between text-white font-bold shadow-md transition-colors duration-300">
+        <div className="border-2 p-3 sm:p-4 flex items-center justify-between font-bold shadow-md transition-colors duration-300" style={{ backgroundColor: 'var(--header-bg)', borderColor: 'var(--header-border)' }}>
           <div className="flex items-center">
-            <span className="text-lg sm:text-xl font-retro tracking-widest text-yellow-300 dark:text-purple-300">RETROSEND_V1.0</span>
+            <span className="text-lg sm:text-xl font-retro tracking-widest transition-colors duration-300" style={{ color: 'var(--header-text)' }}>RETROSEND_V1.0</span>
           </div>
           
           <div className="flex items-center gap-2">
@@ -41,12 +42,12 @@ export function RetroLayout({ children }: RetroLayoutProps) {
               {theme === 'light' ? (
                 <>
                   <span className="hidden sm:inline">DARK</span>
-                  <span className="text-xs">🌙</span>
+                  <Moon className="w-3 h-3 sm:w-4 sm:h-4" />
                 </>
               ) : (
                 <>
                   <span className="hidden sm:inline">LIGHT</span>
-                  <span className="text-xs">☀️</span>
+                  <Sun className="w-3 h-3 sm:w-4 sm:h-4" />
                 </>
               )}
             </button>
@@ -80,24 +81,30 @@ export function RetroLayout({ children }: RetroLayoutProps) {
 
       {/* Animated Menu Overlay */}
       <div
-        className={`fixed inset-0 bg-black/80 backdrop-blur-sm z-50 transition-all duration-300 ${
+        className={`fixed inset-0 backdrop-blur-sm z-50 transition-all duration-300 ${
           isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
         }`}
+        style={{ backgroundColor: 'color-mix(in srgb, var(--terminal-bg) 80%, transparent)' }}
         onClick={() => setIsMenuOpen(false)}
         data-testid="menu-overlay"
       >
         <nav
-          className={`fixed top-0 right-0 h-full w-64 bg-[#000080] border-l-4 border-yellow-300 shadow-2xl transform transition-transform duration-300 ${
+          className={`fixed top-0 right-0 h-full w-64 border-l-4 shadow-2xl transform transition-all duration-300 ${
             isMenuOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
+          style={{ 
+            backgroundColor: 'var(--header-bg)',
+            borderColor: 'var(--header-border)'
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-6 flex flex-col gap-4">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-yellow-300 font-retro text-lg">MENU</span>
+              <span className="font-retro text-lg transition-colors duration-300" style={{ color: 'var(--header-text)' }}>MENU</span>
               <button
                 onClick={() => setIsMenuOpen(false)}
-                className="text-white hover:text-yellow-300 text-2xl"
+                className="text-2xl transition-colors duration-300 hover:opacity-70"
+                style={{ color: 'var(--header-text)' }}
                 data-testid="button-close-menu"
               >
                 ×
@@ -106,7 +113,8 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             
             <Link
               href="/"
-              className="text-white hover:text-yellow-300 no-underline hover:underline text-lg font-sans py-2 transition-colors"
+              className="no-underline hover:underline text-lg font-sans py-2 transition-opacity duration-300 hover:opacity-70"
+              style={{ color: 'var(--header-text)' }}
               onClick={() => setIsMenuOpen(false)}
               data-testid="link-home"
             >
@@ -114,7 +122,8 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             </Link>
             <Link
               href="/upload"
-              className="text-white hover:text-yellow-300 no-underline hover:underline text-lg font-sans py-2 transition-colors"
+              className="no-underline hover:underline text-lg font-sans py-2 transition-opacity duration-300 hover:opacity-70"
+              style={{ color: 'var(--header-text)' }}
               onClick={() => setIsMenuOpen(false)}
               data-testid="link-upload"
             >
@@ -122,7 +131,8 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             </Link>
             <Link
               href="/download"
-              className="text-white hover:text-yellow-300 no-underline hover:underline text-lg font-sans py-2 transition-colors"
+              className="no-underline hover:underline text-lg font-sans py-2 transition-opacity duration-300 hover:opacity-70"
+              style={{ color: 'var(--header-text)' }}
               onClick={() => setIsMenuOpen(false)}
               data-testid="link-download"
             >
@@ -130,7 +140,8 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             </Link>
             <Link
               href="/guestbook"
-              className="text-white hover:text-yellow-300 no-underline hover:underline text-lg font-sans py-2 transition-colors"
+              className="no-underline hover:underline text-lg font-sans py-2 transition-opacity duration-300 hover:opacity-70"
+              style={{ color: 'var(--header-text)' }}
               onClick={() => setIsMenuOpen(false)}
               data-testid="link-guestbook"
             >
@@ -142,7 +153,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
 
       {/* Marquee Banner */}
       <div className="mb-4">
-        <div className="bg-blue-900 dark:bg-purple-900 text-white p-2 font-bold font-sans text-center marquee-container border-2 border-white dark:border-purple-400 text-xs sm:text-sm transition-colors duration-300">
+        <div className="p-2 font-bold font-sans text-center marquee-container border-2 text-xs sm:text-sm transition-colors duration-300" style={{ backgroundColor: 'var(--header-bg)', borderColor: 'var(--header-border)', color: 'var(--header-text)' }}>
           <div className="marquee-content">
             WELCOME TO RETROSEND *** UPLOAD FILES FAST *** NO LOGS *** 100% FREE *** BEST VIEWED IN NETSCAPE NAVIGATOR 4.0
           </div>
