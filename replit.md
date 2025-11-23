@@ -1,0 +1,156 @@
+# RetroSend - 90s-Style File Sharing Application
+
+## Overview
+
+RetroSend is a temporary file-sharing web application that combines a nostalgic 1990s-style user interface with a modern, secure backend architecture. The application allows users to upload files and receive a 6-digit share code for easy sharing. Files are automatically deleted after 24 hours, and the entire experience is wrapped in an authentic retro aesthetic featuring period-appropriate fonts, colors, and design elements.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+
+**Framework & Build System**
+- React with TypeScript for type-safe component development
+- Vite as the build tool and development server, configured for both development and production environments
+- Wouter for lightweight client-side routing instead of React Router
+
+**UI Component Library**
+- shadcn/ui components (Radix UI primitives) for accessible, composable UI elements
+- Tailwind CSS for utility-first styling with custom retro-themed design tokens
+- Custom retro fonts: VT323, Press Start 2P, and Courier Prime for authentic 90s aesthetics
+
+**State Management**
+- TanStack Query (React Query) for server state management, caching, and API interaction
+- React Context API for Terminal logging system that displays real-time operation logs in a retro terminal style
+
+**Design System**
+- Custom theme variables defined inline in CSS for retro color palette (#c0c0c0 gray, #000080 blue, etc.)
+- Component-based architecture with reusable RetroLayout wrapper
+- Responsive design considerations with mobile breakpoint detection
+
+### Backend Architecture
+
+**Server Framework**
+- Express.js for HTTP server and API routing
+- Custom development and production server setups with different static file serving strategies
+- Development mode integrates Vite middleware for hot module replacement
+
+**File Upload & Storage**
+- Multer middleware for handling multipart/form-data file uploads
+- Local file system storage in `/uploads` directory with unique filename generation
+- 50MB file size limit enforced at the middleware level
+- Random 6-digit code generation for file identification
+
+**Data Layer**
+- In-memory storage implementation (MemStorage) for development/testing
+- Drizzle ORM configured for PostgreSQL database with schema definitions
+- Automatic file cleanup mechanism using setInterval to remove expired files
+- Schema includes Users and Files tables with proper relationships and constraints
+
+**Request/Response Handling**
+- JSON body parsing with raw body preservation for webhook verification scenarios
+- URL-encoded form data support
+- Request logging middleware that captures duration, status codes, and response payloads
+- CORS and security considerations through Express middleware
+
+### Data Schema
+
+**Files Table**
+- Unique 6-digit codes for file retrieval
+- Original filename preservation alongside system-generated unique filenames
+- File metadata: size, MIME type
+- Timestamp tracking: uploadedAt, expiresAt (24-hour expiration window)
+- UUID primary keys with PostgreSQL's gen_random_uuid()
+
+**Users Table**
+- Basic authentication structure (username/password)
+- Prepared for potential future authentication features
+
+### API Structure
+
+**Endpoints**
+- `POST /api/upload` - Accepts file uploads via multipart form data, returns share code and file metadata
+- `GET /api/file/:code` - Retrieves file metadata for display before download
+- Download functionality integrated through code-based retrieval
+
+**Validation**
+- Zod schemas generated from Drizzle ORM schemas for runtime type validation
+- Input validation using @hookform/resolvers for form handling
+
+### Development & Build Process
+
+**Development Mode**
+- Vite dev server runs on port 5000
+- Express backend serves API routes and proxies frontend requests to Vite
+- Hot module replacement for instant feedback during development
+- Custom Replit plugins for error overlays, cartographer, and dev banner
+
+**Production Build**
+- Client builds to `dist/public` using Vite
+- Server bundles to `dist/index.js` using esbuild with ESM format
+- Static file serving from built client directory
+- All routes fall through to index.html for SPA routing
+
+**Database Operations**
+- `npm run db:push` - Pushes schema changes to PostgreSQL using Drizzle Kit
+- Migration files stored in `/migrations` directory
+- Configured for Neon serverless PostgreSQL
+
+## External Dependencies
+
+### Third-Party Services
+
+**Database**
+- Neon Serverless PostgreSQL (@neondatabase/serverless) - Cloud PostgreSQL database with connection pooling
+- Configured via DATABASE_URL environment variable
+
+**Replit Platform Integration**
+- @replit/vite-plugin-runtime-error-modal - Development error overlay
+- @replit/vite-plugin-cartographer - Code navigation features
+- @replit/vite-plugin-dev-banner - Development environment indicator
+- Custom meta images plugin for OpenGraph image handling on Replit deployments
+
+### Key NPM Packages
+
+**Core Framework**
+- react, react-dom - UI library
+- express - Web server framework
+- drizzle-orm - Type-safe ORM for PostgreSQL
+- vite - Build tool and dev server
+
+**File Handling**
+- multer - Multipart form data and file upload handling
+
+**UI Components**
+- @radix-ui/* - Accessible component primitives (30+ packages)
+- class-variance-authority - Component variant styling
+- tailwindcss - Utility-first CSS framework
+- lucide-react - Icon library
+
+**Developer Experience**
+- typescript - Type safety
+- tsx - TypeScript execution for development
+- esbuild - Fast JavaScript bundler for production
+- wouter - Lightweight routing library
+
+**Form & Data Handling**
+- react-hook-form - Form state management
+- @hookform/resolvers - Form validation
+- zod - Schema validation
+- @tanstack/react-query - Server state management
+
+### Font Resources
+
+**Google Fonts CDN**
+- Press Start 2P - Pixel-style font for headers
+- VT323 - Terminal/monospace font
+- Courier Prime - Typewriter-style font
+
+### Asset Management
+
+- Custom video assets stored in `/attached_assets/generated_videos/`
+- Static assets served from `client/public/`
+- Path aliases configured: @/ for client source, @shared for shared code, @assets for attached assets
