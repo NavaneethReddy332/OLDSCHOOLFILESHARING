@@ -57,33 +57,36 @@ export default function Home() {
     if (!file) return;
     
     addLog(`INITIATING_UPLOAD: ${file.name}...`);
+    addLog(`ESTABLISHING_CONNECTION...`);
     
-    const progressSteps = [
-      { delay: 100, message: 'PACKET_TRANSFER: 15% COMPLETE...' },
-      { delay: 300, message: 'PACKET_TRANSFER: 35% COMPLETE...' },
-      { delay: 600, message: 'PACKET_TRANSFER: 58% COMPLETE...' },
-      { delay: 900, message: 'PACKET_TRANSFER: 72% COMPLETE...' },
-      { delay: 1200, message: 'PACKET_TRANSFER: 85% COMPLETE...' },
-      { delay: 1500, message: 'PACKET_TRANSFER: 95% COMPLETE...' },
-      { delay: 1800, message: 'FINALIZING_TRANSFER...' },
-    ];
+    setTimeout(() => addLog(`CONNECTION_ESTABLISHED`), 100);
+    setTimeout(() => addLog(`ALLOCATING_BUFFER_SPACE...`), 200);
+    setTimeout(() => addLog(`ENCODING_FILE_DATA...`), 400);
+    setTimeout(() => addLog(`PACKET_TRANSFER: 8% COMPLETE...`), 600);
+    setTimeout(() => addLog(`PACKET_TRANSFER: 15% COMPLETE...`), 900);
+    setTimeout(() => addLog(`CHECKING_CHECKSUM... OK`), 1200);
+    setTimeout(() => addLog(`PACKET_TRANSFER: 28% COMPLETE...`), 1500);
+    setTimeout(() => addLog(`PACKET_TRANSFER: 42% COMPLETE...`), 2000);
+    setTimeout(() => addLog(`VERIFYING_INTEGRITY...`), 2500);
+    setTimeout(() => addLog(`PACKET_TRANSFER: 56% COMPLETE...`), 3000);
+    setTimeout(() => addLog(`PACKET_TRANSFER: 67% COMPLETE...`), 3500);
+    setTimeout(() => addLog(`APPLYING_COMPRESSION...`), 4000);
+    setTimeout(() => addLog(`PACKET_TRANSFER: 78% COMPLETE...`), 4500);
+    setTimeout(() => addLog(`PACKET_TRANSFER: 89% COMPLETE...`), 5000);
+    setTimeout(() => addLog(`PACKET_TRANSFER: 95% COMPLETE...`), 5500);
+    setTimeout(() => addLog(`FINALIZING_TRANSFER...`), 6000);
 
-    const timeouts: NodeJS.Timeout[] = [];
-    
-    progressSteps.forEach(({ delay, message }) => {
-      const timeout = setTimeout(() => {
-        if (uploadMutation.isPending || !uploadMutation.isIdle) {
-          addLog(message);
-        }
-      }, delay);
-      timeouts.push(timeout);
-    });
+    if (password) {
+      setTimeout(() => addLog(`ENCRYPTING_WITH_PASSWORD...`), 6200);
+    }
+    if (maxDownloads) {
+      setTimeout(() => addLog(`SETTING_DOWNLOAD_LIMIT: ${maxDownloads}`), 6300);
+    }
+    if (isOneTime) {
+      setTimeout(() => addLog(`CONFIGURING_ONE_TIME_DELETE...`), 6400);
+    }
 
-    uploadMutation.mutate({ file, password, maxDownloads, isOneTime }, {
-      onSettled: () => {
-        timeouts.forEach(clearTimeout);
-      },
-    });
+    uploadMutation.mutate({ file, password, maxDownloads, isOneTime });
   };
 
   const [downloadCode, setDownloadCode] = useState("");
