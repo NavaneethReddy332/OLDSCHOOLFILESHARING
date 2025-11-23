@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { Link } from 'wouter';
 import { useTerminal } from '../context/TerminalContext';
 import generatedVideo from '@assets/generated_videos/retro_90s_computer_interface_with_scrolling_code_and_glitch_effects.mp4';
 
@@ -26,9 +27,9 @@ export function RetroLayout({ children }: RetroLayoutProps) {
           </div>
           
           <nav className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm font-sans justify-center">
-            <a href="/" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-home">[ HOME ]</a>
-            <a href="/upload" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-upload">[ UPLOAD ]</a>
-            <a href="/download" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-download">[ DOWNLOAD ]</a>
+            <Link href="/" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-home">[ HOME ]</Link>
+            <Link href="/upload" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-upload">[ UPLOAD ]</Link>
+            <Link href="/download" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-download">[ DOWNLOAD ]</Link>
             <a href="#" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-guestbook">[ GUESTBOOK ]</a>
           </nav>
         </div>
@@ -44,9 +45,14 @@ export function RetroLayout({ children }: RetroLayoutProps) {
       </div>
       
       {/* Main Layout Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,280px)_1fr] gap-4">
-        {/* Sidebar */}
-        <aside className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,280px)_1fr] gap-4">
+        {/* Main Content - appears first on mobile */}
+        <main className="bg-white border-2 border-gray-400 p-4 sm:p-6 min-h-[400px] order-1 md:order-2">
+          {children}
+        </main>
+
+        {/* Sidebar - appears second on mobile, first on desktop */}
+        <aside className="space-y-4 order-2 md:order-1">
           {/* Video Feed */}
           <div className="border-2 border-gray-600 bg-black relative overflow-hidden h-[120px] sm:h-[140px]">
             <video 
@@ -88,11 +94,6 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             VISITORS: 003482
           </div>
         </aside>
-        
-        {/* Main Content */}
-        <main className="bg-white border-2 border-gray-400 p-4 sm:p-6 min-h-[400px]">
-          {children}
-        </main>
       </div>
       
       {/* Footer */}
