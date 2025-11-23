@@ -4,6 +4,7 @@ import { RetroLayout } from "../components/RetroLayout";
 import { useTerminal } from "../context/TerminalContext";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -150,6 +151,7 @@ export default function Home() {
                       className="retro-input w-full text-sm"
                       data-testid="input-password"
                     />
+                    <PasswordStrengthMeter password={password} />
                   </div>
                   
                   <div>
