@@ -176,7 +176,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             {/* Terminal Content */}
             <div 
               ref={terminalScrollRef}
-              className="relative h-full overflow-y-auto p-3 font-mono text-[10px] sm:text-xs font-bold"
+              className="retro-terminal-scroll relative h-full overflow-y-auto p-3 font-mono text-[10px] sm:text-xs font-bold"
             >
               {/* Header Bar */}
               <div className="border-b border-green-900/50 pb-1 mb-2 text-center bg-green-900/10 sticky top-0 backdrop-blur-sm z-20">

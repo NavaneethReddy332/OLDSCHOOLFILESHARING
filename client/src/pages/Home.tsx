@@ -3,6 +3,7 @@ import { useState } from "react";
 import { RetroLayout } from "../components/RetroLayout";
 import { useTerminal } from "../context/TerminalContext";
 import { useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -11,6 +12,7 @@ export default function Home() {
   const [maxDownloads, setMaxDownloads] = useState("");
   const [isOneTime, setIsOneTime] = useState(false);
   const { addLog } = useTerminal();
+  const { toast } = useToast();
 
   const uploadMutation = useMutation({
     mutationFn: async (fileData: { file: File; password: string; maxDownloads: string; isOneTime: boolean }) => {
@@ -41,6 +43,11 @@ export default function Home() {
     },
     onError: (error) => {
       addLog(`ERROR: UPLOAD_FAILED - ${error.message}`, 'error');
+      toast({
+        title: "Upload Failed",
+        description: error.message || "An error occurred while uploading your file. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -96,7 +103,11 @@ export default function Home() {
       setLocation(`/download/${downloadCode}`);
     } else {
       addLog(`ERROR: INVALID_CODE_FORMAT`, "error");
-      alert("Please enter a valid 6-digit code.");
+      toast({
+        title: "Invalid Code Format",
+        description: "Please enter a valid 6-digit code.",
+        variant: "destructive",
+      });
     }
   };
 

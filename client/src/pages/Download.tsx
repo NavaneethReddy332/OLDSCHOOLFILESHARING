@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { RetroLayout } from "../components/RetroLayout";
 import { useTerminal } from "../context/TerminalContext";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 interface FileInfo {
   code: string;
@@ -23,6 +24,7 @@ export default function Download() {
   const code = params?.code;
   const [, setLocation] = useLocation();
   const { addLog } = useTerminal();
+  const { toast } = useToast();
   
   const [inputCode, setInputCode] = useState("");
 
@@ -81,7 +83,11 @@ export default function Download() {
 
         if (!verifyResponse.ok) {
           addLog(`ERROR: INCORRECT_PASSWORD`, 'error');
-          alert('Incorrect password. Please try again.');
+          toast({
+            title: "Incorrect Password",
+            description: "The password you entered is incorrect. Please try again.",
+            variant: "destructive",
+          });
           return;
         }
 

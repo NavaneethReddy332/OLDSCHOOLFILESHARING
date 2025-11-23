@@ -4,9 +4,11 @@ import { useTerminal } from "../context/TerminalContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "../lib/queryClient";
 import type { GuestbookEntry, InsertGuestbookEntry } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Guestbook() {
   const { addLog } = useTerminal();
+  const { toast } = useToast();
   const [displayName, setDisplayName] = useState("");
   const [message, setMessage] = useState("");
   const [location, setLocation] = useState("");
@@ -38,7 +40,11 @@ export default function Guestbook() {
     e.preventDefault();
     if (!displayName.trim() || !message.trim()) {
       addLog(`ERROR: NAME_AND_MESSAGE_REQUIRED`, 'error');
-      alert("Please fill in your name and message.");
+      toast({
+        title: "Missing Information",
+        description: "Please fill in your name and message.",
+        variant: "destructive",
+      });
       return;
     }
 
