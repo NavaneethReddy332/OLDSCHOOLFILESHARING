@@ -26,12 +26,39 @@ export const files = pgTable("files", {
   mimetype: text("mimetype").notNull(),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
+  
+  // Security & Privacy Fields
+  passwordHash: text("password_hash"),
+  isPasswordProtected: integer("is_password_protected").notNull().default(0),
+  downloadCount: integer("download_count").notNull().default(0),
+  maxDownloads: integer("max_downloads"),
+  isOneTime: integer("is_one_time").notNull().default(0),
 });
 
 export const insertFileSchema = createInsertSchema(files).omit({
   id: true,
   uploadedAt: true,
+  downloadCount: true,
 });
 
 export type InsertFile = z.infer<typeof insertFileSchema>;
 export type File = typeof files.$inferSelect;
+
+export const guestbookEntries = pgTable("guestbook_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  displayName: text("display_name").notNull(),
+  message: text("message").notNull(),
+  location: text("location"),
+  favoriteSystem: text("favorite_system"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  isApproved: integer("is_approved").notNull().default(1),
+});
+
+export const insertGuestbookEntrySchema = createInsertSchema(guestbookEntries).omit({
+  id: true,
+  createdAt: true,
+  isApproved: true,
+});
+
+export type InsertGuestbookEntry = z.infer<typeof insertGuestbookEntrySchema>;
+export type GuestbookEntry = typeof guestbookEntries.$inferSelect;

@@ -5,7 +5,9 @@ import multer from "multer";
 import { randomBytes } from "crypto";
 import { join } from "path";
 import { mkdir } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, unlinkSync } from "fs";
+import bcrypt from "bcrypt";
+import { insertGuestbookEntrySchema } from "@shared/schema";
 
 const UPLOAD_DIR = join(process.cwd(), "uploads");
 
@@ -52,6 +54,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
 
+      const { password, maxDownloads, isOneTime } = req.body;
+      
+      let passwordHash = null;
+      let isPasswordProtected = 0;
+      
+      if (password && password.trim() !== "") {
+        passwordHash = await bcrypt.hash(password, 10);
+        isPasswordProtected = 1;
+      }
+
       const file = await storage.createFile({
         code,
         filename: req.file.filename,
@@ -59,6 +71,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         size: req.file.size,
         mimetype: req.file.mimetype,
         expiresAt,
+        passwordHash,
+        isPasswordProtected,
+        maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+        isOneTime: isOneTime === 'true' || isOneTime === true ? 1 : 0,
       });
 
       res.json({
@@ -66,6 +82,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         originalName: file.originalName,
         size: file.size,
         expiresAt: file.expiresAt,
+        isPasswordProtected: file.isPasswordProtected,
+        maxDownloads: file.maxDownloads,
+        isOneTime: file.isOneTime,
       });
     } catch (error) {
       console.error("Upload error:", error);
@@ -87,6 +106,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "File not found or expired" });
       }
 
+      const remainingDownloads = file.maxDownloads 
+        ? file.maxDownloads - file.downloadCount 
+        : null;
+
       res.json({
         code: file.code,
         originalName: file.originalName,
@@ -94,6 +117,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mimetype: file.mimetype,
         uploadedAt: file.uploadedAt,
         expiresAt: file.expiresAt,
+        isPasswordProtected: file.isPasswordProtected,
+        downloadCount: file.downloadCount,
+        maxDownloads: file.maxDownloads,
+        remainingDownloads,
+        isOneTime: file.isOneTime,
       });
     } catch (error) {
       console.error("File lookup error:", error);
@@ -101,9 +129,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/download/:code", async (req, res) => {
+  app.post("/api/file/:code/verify", async (req, res) => {
     try {
       const { code } = req.params;
+      const { password } = req.body;
+
+      const file = await storage.getFileByCode(code);
+
+      if (!file) {
+        return res.status(404).json({ error: "File not found or expired" });
+      }
+
+      if (!file.isPasswordProtected) {
+        return res.json({ success: true });
+      }
+
+      if (!password) {
+        return res.status(401).json({ error: "Password required" });
+      }
+
+      const isValid = await bcrypt.compare(password, file.passwordHash || "");
+      
+      if (!isValid) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Password verification error:", error);
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
+  app.post("/api/download/:code", async (req, res) => {
+    try {
+      const { code } = req.params;
+      const { password } = req.body;
       
       const file = await storage.getFileByCode(code);
 
@@ -111,16 +172,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "File not found or expired" });
       }
 
+      if (file.isPasswordProtected) {
+        if (!password) {
+          return res.status(401).json({ error: "Password required" });
+        }
+        const isValid = await bcrypt.compare(password, file.passwordHash || "");
+        if (!isValid) {
+          return res.status(401).json({ error: "Incorrect password" });
+        }
+      }
+
+      if (file.maxDownloads && file.downloadCount >= file.maxDownloads) {
+        return res.status(403).json({ error: "Download limit reached" });
+      }
+
+      await storage.incrementDownloadCount(file.id);
+
       const filePath = join(UPLOAD_DIR, file.filename);
       
       res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
       res.setHeader("Content-Type", file.mimetype);
       res.setHeader("Content-Length", file.size);
       
-      res.sendFile(filePath);
+      res.sendFile(filePath, async (err) => {
+        if (err) {
+          console.error("File send error:", err);
+          return;
+        }
+        
+        if (file.isOneTime || (file.maxDownloads && file.downloadCount + 1 >= file.maxDownloads)) {
+          try {
+            await storage.deleteFile(file.id);
+            if (existsSync(filePath)) {
+              unlinkSync(filePath);
+            }
+          } catch (deleteError) {
+            console.error("File cleanup error:", deleteError);
+          }
+        }
+      });
     } catch (error) {
       console.error("Download error:", error);
       res.status(500).json({ error: "Download failed" });
+    }
+  });
+
+  app.get("/api/guestbook", async (req, res) => {
+    try {
+      const entries = await storage.getAllGuestbookEntries();
+      res.json(entries);
+    } catch (error) {
+      console.error("Guestbook fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch guestbook entries" });
+    }
+  });
+
+  app.post("/api/guestbook", async (req, res) => {
+    try {
+      const result = insertGuestbookEntrySchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid guestbook entry data" });
+      }
+
+      const entry = await storage.createGuestbookEntry(result.data);
+      res.json(entry);
+    } catch (error) {
+      console.error("Guestbook post error:", error);
+      res.status(500).json({ error: "Failed to create guestbook entry" });
     }
   });
 

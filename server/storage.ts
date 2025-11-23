@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type File, type InsertFile } from "@shared/schema";
+import { type User, type InsertUser, type File, type InsertFile, type GuestbookEntry, type InsertGuestbookEntry } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -10,6 +10,10 @@ export interface IStorage {
   getFileByCode(code: string): Promise<File | undefined>;
   deleteFile(id: string): Promise<void>;
   cleanupExpiredFiles(): Promise<void>;
+  incrementDownloadCount(id: string): Promise<void>;
+  
+  createGuestbookEntry(entry: InsertGuestbookEntry): Promise<GuestbookEntry>;
+  getAllGuestbookEntries(): Promise<GuestbookEntry[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -50,6 +54,11 @@ export class MemStorage implements IStorage {
       ...insertFile, 
       id,
       uploadedAt: new Date(),
+      downloadCount: 0,
+      isPasswordProtected: insertFile.isPasswordProtected || 0,
+      isOneTime: insertFile.isOneTime || 0,
+      passwordHash: insertFile.passwordHash || null,
+      maxDownloads: insertFile.maxDownloads || null,
     };
     this.files.set(id, file);
     this.filesByCode.set(insertFile.code, id);
@@ -87,6 +96,31 @@ export class MemStorage implements IStorage {
         this.deleteFile(id);
       }
     }
+  }
+
+  async incrementDownloadCount(id: string): Promise<void> {
+    const file = this.files.get(id);
+    if (file) {
+      file.downloadCount++;
+      this.files.set(id, file);
+    }
+  }
+
+  async createGuestbookEntry(entry: InsertGuestbookEntry): Promise<GuestbookEntry> {
+    const id = randomUUID();
+    const guestbookEntry: GuestbookEntry = {
+      ...entry,
+      id,
+      createdAt: new Date(),
+      isApproved: 1,
+      location: entry.location || null,
+      favoriteSystem: entry.favoriteSystem || null,
+    };
+    return guestbookEntry;
+  }
+
+  async getAllGuestbookEntries(): Promise<GuestbookEntry[]> {
+    return [];
   }
 }
 
