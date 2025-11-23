@@ -9,12 +9,12 @@ interface RetroLayoutProps {
 
 export function RetroLayout({ children }: RetroLayoutProps) {
   const { logs } = useTerminal();
-  const terminalRef = useRef<HTMLDivElement>(null);
+  const terminalScrollRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    if (terminalScrollRef.current) {
+      terminalScrollRef.current.scrollTop = terminalScrollRef.current.scrollHeight;
     }
   }, [logs]);
 
@@ -148,23 +148,95 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             </div>
           </div>
 
-          {/* Terminal Section */}
+          {/* Terminal Section with CRT Effects */}
           <div 
-            ref={terminalRef}
-            className="bg-black text-green-500 font-mono text-[10px] sm:text-xs p-2 border-2 border-gray-600 h-64 sm:h-80 overflow-y-auto font-bold relative"
+            className="relative bg-black border-2 border-gray-600 h-64 sm:h-80 overflow-hidden"
+            style={{
+              boxShadow: 'inset 0 0 40px rgba(0, 255, 0, 0.15), 0 0 20px rgba(0, 255, 0, 0.1)',
+            }}
           >
-            <div className="border-b border-green-900 pb-1 mb-2 text-center bg-green-900/20 sticky top-0 backdrop-blur-sm">
-              ROOT_ACCESS
-            </div>
-            <div className="opacity-90 leading-tight space-y-0.5">
-              {logs.map((log) => (
-                <div key={log.id} className="break-all">
-                  <span className="text-green-300">root@retro:~#</span> {log.message}
+            {/* CRT Scanlines Effect */}
+            <div 
+              className="absolute inset-0 pointer-events-none z-10"
+              style={{
+                background: 'repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 2px)',
+                animation: 'scanline 8s linear infinite',
+              }}
+            />
+            
+            {/* CRT Flicker Effect */}
+            <div 
+              className="absolute inset-0 pointer-events-none z-10 opacity-10"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                animation: 'flicker 0.15s infinite',
+              }}
+            />
+            
+            {/* Terminal Content */}
+            <div 
+              ref={terminalScrollRef}
+              className="relative h-full overflow-y-auto p-3 font-mono text-[10px] sm:text-xs font-bold"
+            >
+              {/* Header Bar */}
+              <div className="border-b border-green-900/50 pb-1 mb-2 text-center bg-green-900/10 sticky top-0 backdrop-blur-sm z-20">
+                <span className="text-green-400 tracking-widest">
+                  ◆ SYSTEM TERMINAL ◆
+                </span>
+              </div>
+              
+              {/* Log Lines */}
+              <div className="space-y-1 leading-tight">
+                {logs.map((log, index) => {
+                  const getColorClass = () => {
+                    switch (log.type) {
+                      case 'error': return 'text-red-500';
+                      case 'warning': return 'text-yellow-500';
+                      case 'success': return 'text-cyan-400';
+                      case 'system': return 'text-blue-400';
+                      default: return 'text-green-400';
+                    }
+                  };
+                  
+                  const getPrefix = () => {
+                    switch (log.type) {
+                      case 'error': return '[ERR]';
+                      case 'warning': return '[WRN]';
+                      case 'success': return '[OK!]';
+                      case 'system': return '[SYS]';
+                      default: return '[>>>]';
+                    }
+                  };
+                  
+                  return (
+                    <div 
+                      key={log.id} 
+                      className={`break-all ${getColorClass()} transition-all duration-300`}
+                      style={{
+                        textShadow: `0 0 5px currentColor`,
+                        animation: log.isNew ? 'typeIn 0.3s ease-out' : 'none',
+                      }}
+                    >
+                      <span className="text-green-600 text-[9px]">{log.timestamp}</span>
+                      <span className="mx-1 font-bold">{getPrefix()}</span>
+                      <span className="opacity-90">{log.message}</span>
+                    </div>
+                  );
+                })}
+                
+                {/* Cursor Line */}
+                <div className="mt-3 flex items-center">
+                  <span className="text-green-400">root@retrosend</span>
+                  <span className="text-green-600 mx-1">:</span>
+                  <span className="text-cyan-400">~</span>
+                  <span className="text-green-400 mx-1">$</span>
+                  <span 
+                    className="inline-block w-2 h-3 bg-green-500 align-middle animate-pulse"
+                    style={{
+                      boxShadow: '0 0 10px rgba(0, 255, 0, 0.8)',
+                    }}
+                  />
                 </div>
-              ))}
-              <div className="mt-2">
-                <span className="text-green-300">root@retro:~#</span> 
-                <span className="animate-cursor inline-block w-2 h-3 bg-green-500 align-middle ml-1"></span>
               </div>
             </div>
           </div>

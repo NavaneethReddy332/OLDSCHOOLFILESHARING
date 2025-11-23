@@ -53,39 +53,37 @@ export default function Home() {
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file) return;
     
     addLog(`INITIATING_UPLOAD: ${file.name}...`);
-    addLog(`ESTABLISHING_CONNECTION...`);
+    addLog(`FILE_SIZE: ${(file.size / 1024).toFixed(2)} KB`);
     
-    setTimeout(() => addLog(`CONNECTION_ESTABLISHED`), 100);
-    setTimeout(() => addLog(`ALLOCATING_BUFFER_SPACE...`), 200);
-    setTimeout(() => addLog(`ENCODING_FILE_DATA...`), 400);
-    setTimeout(() => addLog(`PACKET_TRANSFER: 8% COMPLETE...`), 600);
-    setTimeout(() => addLog(`PACKET_TRANSFER: 15% COMPLETE...`), 900);
-    setTimeout(() => addLog(`CHECKING_CHECKSUM... OK`), 1200);
-    setTimeout(() => addLog(`PACKET_TRANSFER: 28% COMPLETE...`), 1500);
-    setTimeout(() => addLog(`PACKET_TRANSFER: 42% COMPLETE...`), 2000);
-    setTimeout(() => addLog(`VERIFYING_INTEGRITY...`), 2500);
-    setTimeout(() => addLog(`PACKET_TRANSFER: 56% COMPLETE...`), 3000);
-    setTimeout(() => addLog(`PACKET_TRANSFER: 67% COMPLETE...`), 3500);
-    setTimeout(() => addLog(`APPLYING_COMPRESSION...`), 4000);
-    setTimeout(() => addLog(`PACKET_TRANSFER: 78% COMPLETE...`), 4500);
-    setTimeout(() => addLog(`PACKET_TRANSFER: 89% COMPLETE...`), 5000);
-    setTimeout(() => addLog(`PACKET_TRANSFER: 95% COMPLETE...`), 5500);
-    setTimeout(() => addLog(`FINALIZING_TRANSFER...`), 6000);
-
-    if (password) {
-      setTimeout(() => addLog(`ENCRYPTING_WITH_PASSWORD...`), 6200);
-    }
-    if (maxDownloads) {
-      setTimeout(() => addLog(`SETTING_DOWNLOAD_LIMIT: ${maxDownloads}`), 6300);
-    }
-    if (isOneTime) {
-      setTimeout(() => addLog(`CONFIGURING_ONE_TIME_DELETE...`), 6400);
-    }
-
+    // Simulate upload progress smoothly
+    const simulateProgress = async () => {
+      const steps = [
+        { msg: 'ESTABLISHING_CONNECTION...', delay: 50 },
+        { msg: 'CONNECTION_ESTABLISHED', delay: 80 },
+        { msg: 'ALLOCATING_BUFFER...', delay: 60 },
+        { msg: 'ENCODING_DATA...', delay: 70 },
+        { msg: 'TRANSFER: █░░░░░░░░░ 10%', delay: 100 },
+        { msg: 'TRANSFER: ███░░░░░░░ 30%', delay: 120 },
+        { msg: 'TRANSFER: █████░░░░░ 50%', delay: 100 },
+        { msg: 'TRANSFER: ███████░░░ 70%', delay: 120 },
+        { msg: 'TRANSFER: █████████░ 90%', delay: 100 },
+      ];
+      
+      for (const step of steps) {
+        await new Promise(resolve => setTimeout(resolve, step.delay));
+        addLog(step.msg);
+      }
+      
+      if (password) addLog(`ENCRYPTING...`);
+      if (maxDownloads) addLog(`LIMIT: ${maxDownloads}`);
+      if (isOneTime) addLog(`ONE_TIME_MODE`);
+    };
+    
+    simulateProgress();
     uploadMutation.mutate({ file, password, maxDownloads, isOneTime });
   };
 
