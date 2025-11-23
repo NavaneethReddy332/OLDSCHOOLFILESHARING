@@ -17,100 +17,92 @@ export function RetroLayout({ children }: RetroLayoutProps) {
   }, [logs]);
 
   return (
-    <div className="min-h-screen p-2 w-full bg-[#c0c0c0] overflow-x-hidden">
-      <table width="100%" border={0} cellPadding={5} style={{ tableLayout: "fixed" }}>
-        <tbody>
-          {/* Floating Header with Menu */}
-          <tr>
-            <td colSpan={2} align="center" className="pb-4">
-              <div className="bg-[#000080] border-2 border-white border-outset p-2 flex items-center justify-between text-white font-bold shadow-md">
-                <div className="flex items-center gap-4">
-                   <span className="text-xl font-retro tracking-widest text-yellow-300">RETROSEND_V1.0</span>
-                </div>
-                
-                <div className="flex gap-4 text-sm font-sans">
-                   <a href="/" className="text-white hover:text-yellow-300 no-underline hover:underline">[ HOME ]</a>
-                   <a href="/upload" className="text-white hover:text-yellow-300 no-underline hover:underline">[ UPLOAD ]</a>
-                   <a href="/download" className="text-white hover:text-yellow-300 no-underline hover:underline">[ DOWNLOAD ]</a>
-                   <a href="#" className="text-white hover:text-yellow-300 no-underline hover:underline">[ GUESTBOOK ]</a>
-                </div>
-              </div>
-            </td>
-          </tr>
-
-          <tr>
-            <td colSpan={2} align="center">
-              <div className="bg-blue-900 text-white p-1 mb-4 font-bold font-sans text-center marquee-container border-2 border-white border-inset">
-                 <div className="marquee-content">
-                   WELCOME TO RETROSEND *** UPLOAD FILES FAST *** NO LOGS *** 100% FREE *** BEST VIEWED IN NETSCAPE NAVIGATOR 4.0
-                 </div>
-              </div>
-            </td>
-          </tr>
+    <div className="min-h-screen p-2 sm:p-4 w-full bg-[#c0c0c0]">
+      {/* Header */}
+      <header className="mb-4">
+        <div className="bg-[#000080] border-2 border-white p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between text-white font-bold shadow-md gap-3">
+          <div className="flex items-center">
+            <span className="text-lg sm:text-xl font-retro tracking-widest text-yellow-300">RETROSEND_V1.0</span>
+          </div>
           
-          <tr style={{ verticalAlign: "top" }}>
-            {/* Sidebar */}
-            <td width="120">
-              {/* Replaced Menu with Video */}
-              <div className="border-2 border-gray-600 border-inset bg-black mb-4 relative overflow-hidden h-[90px]">
-                <video 
-                  src={generatedVideo} 
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline
-                  className="w-full h-full object-cover opacity-80"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[9px] text-green-500 text-center font-mono p-0.5">
-                  LIVE_FEED_CAM_01
-                </div>
-              </div>
+          <nav className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm font-sans justify-center">
+            <a href="/" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-home">[ HOME ]</a>
+            <a href="/upload" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-upload">[ UPLOAD ]</a>
+            <a href="/download" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-download">[ DOWNLOAD ]</a>
+            <a href="#" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-guestbook">[ GUESTBOOK ]</a>
+          </nav>
+        </div>
+      </header>
 
-              {/* Hacking Terminal Section */}
-              <div 
-                ref={terminalRef}
-                className="bg-black text-green-500 font-mono text-[9px] p-1 border-2 border-gray-600 border-inset h-48 overflow-y-auto font-bold relative scrollbar-hide"
-              >
-                <div className="border-b border-green-900 pb-1 mb-1 text-center bg-green-900/20 sticky top-0 backdrop-blur-sm">ROOT_ACCESS</div>
-                <div className="opacity-90 leading-tight pb-6">
-                  {logs.map((log) => (
-                    <div key={log.id}>
-                      <span className="text-green-300">root@retro:~#</span> {log.message}
-                    </div>
-                  ))}
-                  <div className="mt-1">
-                    <span className="text-green-300">root@retro:~#</span> <span className="animate-cursor inline-block w-2 h-3 bg-green-500 align-middle ml-1"></span>
-                  </div>
+      {/* Marquee Banner */}
+      <div className="mb-4">
+        <div className="bg-blue-900 text-white p-2 font-bold font-sans text-center marquee-container border-2 border-white text-xs sm:text-sm">
+          <div className="marquee-content">
+            WELCOME TO RETROSEND *** UPLOAD FILES FAST *** NO LOGS *** 100% FREE *** BEST VIEWED IN NETSCAPE NAVIGATOR 4.0
+          </div>
+        </div>
+      </div>
+      
+      {/* Main Layout Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,280px)_1fr] gap-4">
+        {/* Sidebar */}
+        <aside className="space-y-4">
+          {/* Video Feed */}
+          <div className="border-2 border-gray-600 bg-black relative overflow-hidden h-[120px] sm:h-[140px]">
+            <video 
+              src={generatedVideo} 
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              className="w-full h-full object-cover opacity-80"
+            />
+            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] sm:text-xs text-green-500 text-center font-mono p-1">
+              LIVE_FEED_CAM_01
+            </div>
+          </div>
+
+          {/* Terminal Section */}
+          <div 
+            ref={terminalRef}
+            className="bg-black text-green-500 font-mono text-[10px] sm:text-xs p-2 border-2 border-gray-600 h-64 sm:h-80 overflow-y-auto font-bold relative"
+          >
+            <div className="border-b border-green-900 pb-1 mb-2 text-center bg-green-900/20 sticky top-0 backdrop-blur-sm">
+              ROOT_ACCESS
+            </div>
+            <div className="opacity-90 leading-tight space-y-0.5">
+              {logs.map((log) => (
+                <div key={log.id} className="break-all">
+                  <span className="text-green-300">root@retro:~#</span> {log.message}
                 </div>
-                <div className="fixed bottom-0 left-0 right-0 bg-green-900/10 p-1 text-center border-t border-green-900/30 pointer-events-none">
-                   STATUS: ONLINE
-                </div>
+              ))}
+              <div className="mt-2">
+                <span className="text-green-300">root@retro:~#</span> 
+                <span className="animate-cursor inline-block w-2 h-3 bg-green-500 align-middle ml-1"></span>
               </div>
-              
-              <br />
-              
-              <div className="text-center border-2 border-gray-400 p-1 bg-black text-green-500 font-retro text-xs">
-                VISITORS: 003482
-              </div>
-            </td>
-            
-            {/* Main Content */}
-            <td>
-              <div className="bg-white border-2 border-gray-400 p-4 min-h-[400px]">
-                {children}
-              </div>
-            </td>
-          </tr>
+            </div>
+          </div>
           
-          <tr>
-            <td colSpan={2} align="center" className="pt-4 text-xs font-mono">
-              <hr className="border-gray-500 mb-2" />
-              (c) 1998 RetroSend Inc. All rights reserved.<br />
-              Made with Notepad.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+          {/* Visitor Counter */}
+          <div className="text-center border-2 border-gray-400 p-2 bg-black text-green-500 font-retro text-xs sm:text-sm">
+            VISITORS: 003482
+          </div>
+        </aside>
+        
+        {/* Main Content */}
+        <main className="bg-white border-2 border-gray-400 p-4 sm:p-6 min-h-[400px]">
+          {children}
+        </main>
+      </div>
+      
+      {/* Footer */}
+      <footer className="mt-6 text-center text-xs sm:text-sm font-mono">
+        <hr className="border-gray-500 mb-3" />
+        <div>
+          (c) 1998 RetroSend Inc. All rights reserved.<br />
+          Made with Notepad.
+        </div>
+      </footer>
     </div>
   );
 }
