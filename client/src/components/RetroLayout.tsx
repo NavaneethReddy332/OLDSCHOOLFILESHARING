@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { useTerminal } from '../context/TerminalContext';
 import generatedVideo from '@assets/generated_videos/retro_90s_computer_interface_with_scrolling_code_and_glitch_effects.mp4';
@@ -10,6 +10,7 @@ interface RetroLayoutProps {
 export function RetroLayout({ children }: RetroLayoutProps) {
   const { logs } = useTerminal();
   const terminalRef = useRef<HTMLDivElement>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -21,19 +22,98 @@ export function RetroLayout({ children }: RetroLayoutProps) {
     <div className="min-h-screen p-2 sm:p-4 w-full bg-[#c0c0c0]">
       {/* Header */}
       <header className="mb-4">
-        <div className="bg-[#000080] border-2 border-white p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between text-white font-bold shadow-md gap-3">
+        <div className="bg-[#000080] border-2 border-white p-3 sm:p-4 flex items-center justify-between text-white font-bold shadow-md">
           <div className="flex items-center">
             <span className="text-lg sm:text-xl font-retro tracking-widest text-yellow-300">RETROSEND_V1.0</span>
           </div>
           
-          <nav className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm font-sans justify-center">
-            <Link href="/" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-home">[ HOME ]</Link>
-            <Link href="/upload" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-upload">[ UPLOAD ]</Link>
-            <Link href="/download" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-download">[ DOWNLOAD ]</Link>
-            <Link href="/guestbook" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-guestbook">[ GUESTBOOK ]</Link>
-          </nav>
+          {/* Hamburger Menu Button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="flex flex-col gap-1 p-2 hover:bg-white/10 transition-colors rounded"
+            aria-label="Toggle menu"
+            data-testid="button-hamburger-menu"
+          >
+            <span
+              className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
+                isMenuOpen ? 'rotate-45 translate-y-1.5' : ''
+              }`}
+            ></span>
+            <span
+              className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
+                isMenuOpen ? 'opacity-0' : ''
+              }`}
+            ></span>
+            <span
+              className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
+                isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
+              }`}
+            ></span>
+          </button>
         </div>
       </header>
+
+      {/* Animated Menu Overlay */}
+      <div
+        className={`fixed inset-0 bg-black/80 backdrop-blur-sm z-50 transition-all duration-300 ${
+          isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+        }`}
+        onClick={() => setIsMenuOpen(false)}
+        data-testid="menu-overlay"
+      >
+        <nav
+          className={`fixed top-0 right-0 h-full w-64 bg-[#000080] border-l-4 border-yellow-300 shadow-2xl transform transition-transform duration-300 ${
+            isMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-6 flex flex-col gap-4">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-yellow-300 font-retro text-lg">MENU</span>
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                className="text-white hover:text-yellow-300 text-2xl"
+                data-testid="button-close-menu"
+              >
+                ×
+              </button>
+            </div>
+            
+            <Link
+              href="/"
+              className="text-white hover:text-yellow-300 no-underline hover:underline text-lg font-sans py-2 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+              data-testid="link-home"
+            >
+              [ HOME ]
+            </Link>
+            <Link
+              href="/upload"
+              className="text-white hover:text-yellow-300 no-underline hover:underline text-lg font-sans py-2 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+              data-testid="link-upload"
+            >
+              [ UPLOAD ]
+            </Link>
+            <Link
+              href="/download"
+              className="text-white hover:text-yellow-300 no-underline hover:underline text-lg font-sans py-2 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+              data-testid="link-download"
+            >
+              [ DOWNLOAD ]
+            </Link>
+            <Link
+              href="/guestbook"
+              className="text-white hover:text-yellow-300 no-underline hover:underline text-lg font-sans py-2 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+              data-testid="link-guestbook"
+            >
+              [ GUESTBOOK ]
+            </Link>
+          </div>
+        </nav>
+      </div>
 
       {/* Marquee Banner */}
       <div className="mb-4">
