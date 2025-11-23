@@ -97,27 +97,30 @@ export default function Home() {
 
   return (
     <RetroLayout>
-      <center>
-        <h2><span style={{ color: "red" }}>Upload Files Now!</span></h2>
-        <p>Share files with your friends easily. No registration required.</p>
-      </center>
+      <div className="text-center mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-2">
+          <span className="text-red-600">Upload Files Now!</span>
+        </h2>
+        <p className="text-sm sm:text-base">Share files with your friends easily. No registration required.</p>
+      </div>
       
-      <br />
-      
-      <table width="100%" border={0} style={{ backgroundColor: "#eeeeee" }} cellPadding={10} className="border-2 border-gray-400">
-        <tbody>
-          <tr>
-            <td width="50%" valign="top">
-              <form onSubmit={(e) => e.preventDefault()}>
-                <b>Step 1: Select File</b><br /><br />
+      <div className="bg-[#eeeeee] border-2 border-gray-400 p-4 sm:p-6 md:p-8 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+          {/* Upload Section */}
+          <div className="space-y-4">
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+              <div>
+                <div className="font-bold mb-3">Step 1: Select File</div>
                 <input 
                   type="file" 
                   onChange={handleFileChange}
                   className="retro-input w-full"
                   data-testid="input-file"
-                /><br /><br />
-                
-                <b>Step 2: Upload</b><br /><br />
+                />
+              </div>
+              
+              <div>
+                <div className="font-bold mb-3">Step 2: Upload</div>
                 <button 
                   onClick={handleUpload}
                   disabled={!file || isUploading}
@@ -126,40 +129,45 @@ export default function Home() {
                 >
                   {isUploading ? "Uploading..." : "Upload Now >>"}
                 </button>
-              </form>
-            </td>
-            <td width="50%" valign="top" className="border-l-2 border-gray-400 pl-4">
-              <b><span style={{ color: "#000080" }}>Already have a code?</span></b><br /><br />
-              <form onSubmit={handleDownloadSubmit}>
-                Code: <input 
+              </div>
+            </form>
+          </div>
+
+          {/* Download Section */}
+          <div className="space-y-4 md:border-l-2 md:border-gray-400 md:pl-6">
+            <div className="font-bold text-[#000080] mb-3">Already have a code?</div>
+            <form onSubmit={handleDownloadSubmit} className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <label className="font-semibold">Code:</label>
+                <input 
                   type="text" 
-                  size={8} 
                   maxLength={6}
                   value={downloadCode}
                   onChange={(e) => setDownloadCode(e.target.value)}
-                  className="retro-input" 
+                  className="retro-input sm:flex-1" 
                   placeholder="123456"
                   data-testid="input-code"
                 />
-                <br /><br />
-                <button type="submit" className="retro-button" data-testid="button-download">Download File</button>
-              </form>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </div>
+              <button type="submit" className="retro-button" data-testid="button-download">
+                Download File
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
       
-      <br />
-      <hr />
-      <br />
+      <hr className="border-gray-400 my-6" />
       
-      <h3>Why use RetroSend?</h3>
-      <ul>
-        <li>* Fast 56k modem optimization</li>
-        <li>* Works in Netscape & IE</li>
-        <li>* No annoying banners (yet)</li>
-        <li>* Files deleted after 24 hours</li>
-      </ul>
+      <div className="mt-6">
+        <h3 className="text-xl font-bold mb-3">Why use RetroSend?</h3>
+        <ul className="space-y-2 text-sm sm:text-base">
+          <li>* Fast 56k modem optimization</li>
+          <li>* Works in Netscape & IE</li>
+          <li>* No annoying banners (yet)</li>
+          <li>* Files deleted after 24 hours</li>
+        </ul>
+      </div>
 
     </RetroLayout>
   );
