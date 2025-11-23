@@ -2,6 +2,16 @@ import { useLocation, useRoute } from "wouter";
 import { useState, useEffect } from "react";
 import { RetroLayout } from "../components/RetroLayout";
 import { useTerminal } from "../context/TerminalContext";
+import { useQuery } from "@tanstack/react-query";
+
+interface FileInfo {
+  code: string;
+  originalName: string;
+  size: number;
+  mimetype: string;
+  uploadedAt: string;
+  expiresAt: string;
+}
 
 export default function Download() {
   const [, params] = useRoute("/download/:code");
@@ -10,29 +20,29 @@ export default function Download() {
   const { addLog } = useTerminal();
   
   const [inputCode, setInputCode] = useState("");
-  const [status, setStatus] = useState<'input' | 'searching' | 'found' | 'error'>('input');
+
+  const { data: fileInfo, isLoading, isError } = useQuery<FileInfo>({
+    queryKey: ['/api/file', code],
+    enabled: !!code,
+  });
+
+  const status = !code ? 'input' : isLoading ? 'searching' : isError ? 'error' : 'found';
 
   useEffect(() => {
     if (code) {
-      setStatus('searching');
       addLog(`CONNECTING_TO_DB...`);
       addLog(`QUERY: SELECT * FROM FILES WHERE CODE='${code}'`);
-      
-      // Simulate searching
-      setTimeout(() => {
-        if (code === "999999") {
-          setStatus('error'); // Simulating expired/not found
-          addLog(`ERROR: FILE_NOT_FOUND_OR_EXPIRED`, 'error');
-        } else {
-          setStatus('found');
-          addLog(`SUCCESS: FILE_LOCATED`);
-          addLog(`DECRYPTING_METADATA... OK`);
-        }
-      }, 1500);
-    } else {
-      setStatus('input');
     }
-  }, [code]);
+  }, [code, addLog]);
+
+  useEffect(() => {
+    if (fileInfo) {
+      addLog(`SUCCESS: FILE_LOCATED`);
+      addLog(`DECRYPTING_METADATA... OK`);
+    } else if (isError && code) {
+      addLog(`ERROR: FILE_NOT_FOUND_OR_EXPIRED`, 'error');
+    }
+  }, [fileInfo, isError, code, addLog]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,12 +51,29 @@ export default function Download() {
   };
 
   const handleDownload = () => {
+    if (!code) return;
     addLog(`INITIATING_DOWNLOAD_STREAM...`);
     addLog(`BUFFERING...`);
-    alert("Starting download... (simulated)");
+    
+    window.location.href = `/api/download/${code}`;
+    
     setTimeout(() => {
-        addLog(`DOWNLOAD_COMPLETE`);
+      addLog(`DOWNLOAD_COMPLETE`);
     }, 1000);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  const getTimeRemaining = (expiresAt: string) => {
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const diff = expiry.getTime() - now.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    return hours > 0 ? `in ${hours} hours` : 'soon';
   };
 
   return (
@@ -66,9 +93,10 @@ export default function Download() {
                className="retro-input" 
                size={10}
                maxLength={6}
+               data-testid="input-download-code"
              />
              <br /><br />
-             <button type="submit" className="retro-button">Find File</button>
+             <button type="submit" className="retro-button" data-testid="button-find-file">Find File</button>
            </form>
          </center>
       )}
@@ -83,8 +111,8 @@ export default function Download() {
         </center>
       )}
 
-      {status === 'found' && (
-        <div className="border-2 border-blue-800 p-4 bg-[#eeeeff]">
+      {status === 'found' && fileInfo && (
+        <div className="border-2 border-blue-800 p-4 bg-[#eeeeff]" data-testid="file-info">
           <table width="100%">
             <tbody>
               <tr>
@@ -93,9 +121,9 @@ export default function Download() {
                 </td>
                 <td>
                   <b>File Found!</b><br />
-                  Filename: <code>mysterious_document.txt</code><br />
-                  Size: 1.44 MB<br />
-                  Expires: in 23 hours
+                  Filename: <code data-testid="text-filename">{fileInfo.originalName}</code><br />
+                  Size: {formatFileSize(fileInfo.size)}<br />
+                  Expires: {getTimeRemaining(fileInfo.expiresAt)}
                 </td>
               </tr>
             </tbody>
@@ -104,7 +132,7 @@ export default function Download() {
           <br />
           
           <center>
-            <button onClick={handleDownload} className="retro-button font-bold text-lg py-2 px-8">
+            <button onClick={handleDownload} className="retro-button font-bold text-lg py-2 px-8" data-testid="button-download-now">
               DOWNLOAD NOW
             </button>
             <br /><br />
@@ -119,7 +147,7 @@ export default function Download() {
           <h3 className="text-red-600 mt-4">Error 404: File Not Found</h3>
           <p>The file you are looking for has expired or does not exist.</p>
           <br />
-          <button onClick={() => setLocation("/")} className="retro-button">Back to Home</button>
+          <button onClick={() => setLocation("/")} className="retro-button" data-testid="button-back-home">Back to Home</button>
         </center>
       )}
     </RetroLayout>

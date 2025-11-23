@@ -1,13 +1,40 @@
 import { useLocation } from "wouter";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { RetroLayout } from "../components/RetroLayout";
 import { useTerminal } from "../context/TerminalContext";
+import { useMutation } from "@tanstack/react-query";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const { addLog } = useTerminal();
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      addLog(`UPLOAD_COMPLETE: 100%`);
+      addLog(`GENERATING_HASH... OK`);
+      addLog(`SECURE_CODE: ${data.code}`);
+      setLocation(`/result/${data.code}`);
+    },
+    onError: (error) => {
+      addLog(`ERROR: UPLOAD_FAILED - ${error.message}`, 'error');
+    },
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -21,33 +48,19 @@ export default function Home() {
   const handleUpload = () => {
     if (!file) return;
     
-    setIsUploading(true);
     addLog(`INITIATING_UPLOAD: ${file.name}...`);
     
-    const startTime = Date.now();
-    const minUploadTime = 3000; // 3 seconds minimum
-    
-    // Simulate upload progress
     const interval = setInterval(() => {
       if (Math.random() > 0.7) {
         addLog(`PACKET_TRANSFER: ${Math.floor(Math.random() * 100)}% COMPLETE...`);
       }
     }, 800);
 
-    // Determine total upload time based on size (fake)
-    const uploadTime = Math.max(minUploadTime, Math.min(10000, file.size / 100));
-
-    setTimeout(() => {
-      clearInterval(interval);
-      const fakeCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      addLog(`UPLOAD_COMPLETE: 100%`);
-      addLog(`GENERATING_HASH... OK`);
-      addLog(`SECURE_CODE: ${fakeCode}`);
-      
-      setIsUploading(false);
-      setLocation(`/result/${fakeCode}`);
-    }, uploadTime);
+    uploadMutation.mutate(file, {
+      onSettled: () => {
+        clearInterval(interval);
+      },
+    });
   };
 
   const [downloadCode, setDownloadCode] = useState("");
@@ -62,6 +75,8 @@ export default function Home() {
       alert("Please enter a valid 6-digit code.");
     }
   };
+
+  const isUploading = uploadMutation.isPending;
 
   return (
     <RetroLayout>
@@ -82,6 +97,7 @@ export default function Home() {
                   type="file" 
                   onChange={handleFileChange}
                   className="retro-input w-full"
+                  data-testid="input-file"
                 /><br /><br />
                 
                 <b>Step 2: Upload</b><br /><br />
@@ -89,6 +105,7 @@ export default function Home() {
                   onClick={handleUpload}
                   disabled={!file || isUploading}
                   className="retro-button"
+                  data-testid="button-upload"
                 >
                   {isUploading ? "Uploading..." : "Upload Now >>"}
                 </button>
@@ -105,9 +122,10 @@ export default function Home() {
                   onChange={(e) => setDownloadCode(e.target.value)}
                   className="retro-input" 
                   placeholder="123456"
+                  data-testid="input-code"
                 />
                 <br /><br />
-                <button type="submit" className="retro-button">Download File</button>
+                <button type="submit" className="retro-button" data-testid="button-download">Download File</button>
               </form>
             </td>
           </tr>
