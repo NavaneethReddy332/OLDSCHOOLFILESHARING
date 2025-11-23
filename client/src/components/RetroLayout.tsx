@@ -79,7 +79,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                     </div>
                   ))}
                   <div className="mt-1">
-                    <span className="text-green-300">root@retro:~#</span> <span className="animate-pulse inline-block w-2 h-3 bg-green-500 align-middle ml-1"></span>
+                    <span className="text-green-300">root@retro:~#</span> <span className="animate-cursor inline-block w-2 h-3 bg-green-500 align-middle ml-1"></span>
                   </div>
                 </div>
                 <div className="fixed bottom-0 left-0 right-0 bg-green-900/10 p-1 text-center border-t border-green-900/30 pointer-events-none">
