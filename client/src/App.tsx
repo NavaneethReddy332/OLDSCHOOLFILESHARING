@@ -1,4 +1,6 @@
 import { Switch, Route } from "wouter";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
 import Home from "./pages/Home";
 import UploadResult from "./pages/UploadResult";
 import Download from "./pages/Download";
@@ -7,17 +9,19 @@ import { TerminalProvider } from "./context/TerminalContext";
 
 function App() {
   return (
-    <TerminalProvider>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/upload" component={Home} /> {/* Alias for home */}
-        <Route path="/result/:code" component={UploadResult} />
-        <Route path="/download" component={Download} />
-        <Route path="/download/:code" component={Download} />
-        <Route path="/error" component={ErrorPage} />
-        <Route component={ErrorPage} />
-      </Switch>
-    </TerminalProvider>
+    <QueryClientProvider client={queryClient}>
+      <TerminalProvider>
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/upload" component={Home} />
+          <Route path="/result/:code" component={UploadResult} />
+          <Route path="/download" component={Download} />
+          <Route path="/download/:code" component={Download} />
+          <Route path="/error" component={ErrorPage} />
+          <Route component={ErrorPage} />
+        </Switch>
+      </TerminalProvider>
+    </QueryClientProvider>
   );
 }
 
