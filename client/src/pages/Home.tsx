@@ -122,7 +122,7 @@ export default function Home() {
         <p className="text-sm sm:text-base">Share files with your friends easily. No registration required.</p>
       </div>
       
-      <div className="bg-[#eeeeee] border-2 border-gray-400 p-4 sm:p-6 md:p-8 mb-6">
+      <div className="retro-border p-4 sm:p-6 md:p-8 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
           {/* Upload Section */}
           <div className="space-y-4">
@@ -139,7 +139,7 @@ export default function Home() {
               
               <div>
                 <div className="font-bold mb-3">Step 2: Security Options (Optional)</div>
-                <div className="space-y-3 bg-white border border-gray-400 p-3">
+                <div className="space-y-3 retro-border-inset p-3">
                   <div>
                     <label className="block text-sm mb-1">Password Protection:</label>
                     <input 
@@ -196,8 +196,8 @@ export default function Home() {
           </div>
 
           {/* Download Section */}
-          <div className="space-y-4 md:border-l-2 md:border-gray-400 md:pl-6">
-            <div className="font-bold text-[#000080] mb-3">Already have a code?</div>
+          <div className="space-y-4 md:border-l-2 md:pl-6 transition-colors duration-300" style={{ borderColor: 'var(--border-shadow)' }}>
+            <div className="font-bold mb-3" style={{ color: 'var(--accent)' }}>Already have a code?</div>
             <form onSubmit={handleDownloadSubmit} className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <label className="font-semibold">Code:</label>
@@ -219,7 +219,7 @@ export default function Home() {
         </div>
       </div>
       
-      <hr className="border-gray-400 my-6" />
+      <hr className="my-6 transition-colors duration-300" style={{ borderColor: 'var(--border-shadow)' }} />
       
       <div className="mt-6">
         <h3 className="text-xl font-bold mb-3">Why use RetroSend?</h3>
