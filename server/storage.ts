@@ -20,11 +20,13 @@ export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private files: Map<string, File>;
   private filesByCode: Map<string, string>;
+  private guestbookEntries: Map<string, GuestbookEntry>;
 
   constructor() {
     this.users = new Map();
     this.files = new Map();
     this.filesByCode = new Map();
+    this.guestbookEntries = new Map();
     
     setInterval(() => {
       this.cleanupExpiredFiles();
@@ -116,11 +118,14 @@ export class MemStorage implements IStorage {
       location: entry.location || null,
       favoriteSystem: entry.favoriteSystem || null,
     };
+    this.guestbookEntries.set(id, guestbookEntry);
     return guestbookEntry;
   }
 
   async getAllGuestbookEntries(): Promise<GuestbookEntry[]> {
-    return [];
+    return Array.from(this.guestbookEntries.values())
+      .filter(entry => entry.isApproved === 1)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 }
 

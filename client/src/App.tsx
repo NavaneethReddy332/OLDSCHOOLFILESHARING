@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import Home from "./pages/Home";
 import UploadResult from "./pages/UploadResult";
 import Download from "./pages/Download";
+import Guestbook from "./pages/Guestbook";
 import ErrorPage from "./pages/ErrorPage";
 import { TerminalProvider } from "./context/TerminalContext";
 
@@ -17,6 +18,7 @@ function App() {
           <Route path="/result/:code" component={UploadResult} />
           <Route path="/download" component={Download} />
           <Route path="/download/:code" component={Download} />
+          <Route path="/guestbook" component={Guestbook} />
           <Route path="/error" component={ErrorPage} />
           <Route component={ErrorPage} />
         </Switch>

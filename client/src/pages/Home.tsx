@@ -7,12 +7,18 @@ import { useMutation } from "@tanstack/react-query";
 export default function Home() {
   const [, setLocation] = useLocation();
   const [file, setFile] = useState<File | null>(null);
+  const [password, setPassword] = useState("");
+  const [maxDownloads, setMaxDownloads] = useState("");
+  const [isOneTime, setIsOneTime] = useState(false);
   const { addLog } = useTerminal();
 
   const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (fileData: { file: File; password: string; maxDownloads: string; isOneTime: boolean }) => {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileData.file);
+      if (fileData.password) formData.append("password", fileData.password);
+      if (fileData.maxDownloads) formData.append("maxDownloads", fileData.maxDownloads);
+      formData.append("isOneTime", fileData.isOneTime.toString());
       
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -73,7 +79,7 @@ export default function Home() {
       timeouts.push(timeout);
     });
 
-    uploadMutation.mutate(file, {
+    uploadMutation.mutate({ file, password, maxDownloads, isOneTime }, {
       onSettled: () => {
         timeouts.forEach(clearTimeout);
       },
@@ -120,7 +126,51 @@ export default function Home() {
               </div>
               
               <div>
-                <div className="font-bold mb-3">Step 2: Upload</div>
+                <div className="font-bold mb-3">Step 2: Security Options (Optional)</div>
+                <div className="space-y-3 bg-white border border-gray-400 p-3">
+                  <div>
+                    <label className="block text-sm mb-1">Password Protection:</label>
+                    <input 
+                      type="password" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Leave blank for no password"
+                      className="retro-input w-full text-sm"
+                      data-testid="input-password"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm mb-1">Max Downloads:</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      value={maxDownloads}
+                      onChange={(e) => setMaxDownloads(e.target.value)}
+                      placeholder="Unlimited"
+                      className="retro-input w-full text-sm"
+                      data-testid="input-max-downloads"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="oneTime"
+                      checked={isOneTime}
+                      onChange={(e) => setIsOneTime(e.target.checked)}
+                      className="w-4 h-4"
+                      data-testid="checkbox-one-time"
+                    />
+                    <label htmlFor="oneTime" className="text-sm cursor-pointer">
+                      Delete after first download
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="font-bold mb-3">Step 3: Upload</div>
                 <button 
                   onClick={handleUpload}
                   disabled={!file || isUploading}

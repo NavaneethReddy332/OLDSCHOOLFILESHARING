@@ -11,6 +11,11 @@ interface FileInfo {
   mimetype: string;
   uploadedAt: string;
   expiresAt: string;
+  isPasswordProtected: number;
+  downloadCount: number;
+  maxDownloads: number | null;
+  remainingDownloads: number | null;
+  isOneTime: number;
 }
 
 export default function Download() {
@@ -21,9 +26,10 @@ export default function Download() {
   
   const [inputCode, setInputCode] = useState("");
 
-  const { data: fileInfo, isLoading, isError } = useQuery<FileInfo>({
+  const { data: fileInfo, isLoading, isError, error } = useQuery<FileInfo>({
     queryKey: ['/api/file', code],
     enabled: !!code,
+    retry: false,
   });
 
   const status = !code ? 'input' : isLoading ? 'searching' : isError ? 'error' : 'found';
@@ -50,16 +56,70 @@ export default function Download() {
     setLocation(`/download/${inputCode}`);
   };
 
-  const handleDownload = () => {
-    if (!code) return;
+  const [downloadPassword, setDownloadPassword] = useState("");
+  const [showPasswordInput, setShowPasswordInput] = useState(false);
+
+  const handleDownload = async () => {
+    if (!code || !fileInfo) return;
+    
+    if (fileInfo.isPasswordProtected && !showPasswordInput) {
+      setShowPasswordInput(true);
+      addLog(`PASSWORD_REQUIRED`);
+      return;
+    }
+    
     addLog(`INITIATING_DOWNLOAD_STREAM...`);
     addLog(`BUFFERING...`);
     
-    window.location.href = `/api/download/${code}`;
-    
-    setTimeout(() => {
-      addLog(`DOWNLOAD_COMPLETE`);
-    }, 1000);
+    if (fileInfo.isPasswordProtected) {
+      try {
+        const verifyResponse = await fetch(`/api/file/${code}/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: downloadPassword })
+        });
+
+        if (!verifyResponse.ok) {
+          addLog(`ERROR: INCORRECT_PASSWORD`, 'error');
+          alert('Incorrect password. Please try again.');
+          return;
+        }
+
+        addLog(`PASSWORD_VERIFIED... OK`);
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/api/download/${code}`;
+        
+        const passwordInput = document.createElement('input');
+        passwordInput.type = 'hidden';
+        passwordInput.name = 'password';
+        passwordInput.value = downloadPassword;
+        form.appendChild(passwordInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+        
+        setTimeout(() => {
+          addLog(`DOWNLOAD_COMPLETE`);
+        }, 1000);
+      } catch (error) {
+        addLog(`ERROR: ${error instanceof Error ? error.message : 'Download failed'}`, 'error');
+      }
+    } else {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/api/download/${code}`;
+      
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
+      
+      setTimeout(() => {
+        addLog(`DOWNLOAD_COMPLETE`);
+      }, 1000);
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -123,13 +183,37 @@ export default function Download() {
                   <b>File Found!</b><br />
                   Filename: <code data-testid="text-filename">{fileInfo.originalName}</code><br />
                   Size: {formatFileSize(fileInfo.size)}<br />
-                  Expires: {getTimeRemaining(fileInfo.expiresAt)}
+                  Expires: {getTimeRemaining(fileInfo.expiresAt)}<br />
+                  {fileInfo.isPasswordProtected === 1 && (
+                    <><img src="https://win98icons.alexmeub.com/icons/png/lock_key-0.png" width="16" className="inline" alt="Protected" /> Password Protected<br /></>
+                  )}
+                  {fileInfo.isOneTime === 1 && (
+                    <><b className="text-red-600">⚠ One-time download only</b><br /></>
+                  )}
+                  Downloads: <span data-testid="text-download-count">{fileInfo.downloadCount}</span>
+                  {fileInfo.maxDownloads && (
+                    <> / {fileInfo.maxDownloads} <span className="text-sm">(Remaining: {fileInfo.remainingDownloads})</span></>
+                  )}
                 </td>
               </tr>
             </tbody>
           </table>
           
           <br />
+          
+          {showPasswordInput && (
+            <div className="mb-4 bg-yellow-100 border-2 border-yellow-600 p-3">
+              <label className="block mb-2 font-bold">Enter Password:</label>
+              <input 
+                type="password" 
+                value={downloadPassword}
+                onChange={(e) => setDownloadPassword(e.target.value)}
+                className="retro-input w-full mb-2"
+                placeholder="Enter file password"
+                data-testid="input-download-password"
+              />
+            </div>
+          )}
           
           <center>
             <button onClick={handleDownload} className="retro-button font-bold text-lg py-2 px-8" data-testid="button-download-now">

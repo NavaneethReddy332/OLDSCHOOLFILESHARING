@@ -30,7 +30,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             <Link href="/" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-home">[ HOME ]</Link>
             <Link href="/upload" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-upload">[ UPLOAD ]</Link>
             <Link href="/download" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-download">[ DOWNLOAD ]</Link>
-            <a href="#" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-guestbook">[ GUESTBOOK ]</a>
+            <Link href="/guestbook" className="text-white hover:text-yellow-300 no-underline hover:underline" data-testid="link-guestbook">[ GUESTBOOK ]</Link>
           </nav>
         </div>
       </header>
