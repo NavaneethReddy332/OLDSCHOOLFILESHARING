@@ -29,7 +29,9 @@ export default function Home() {
       addLog(`UPLOAD_COMPLETE: 100%`);
       addLog(`GENERATING_HASH... OK`);
       addLog(`SECURE_CODE: ${data.code}`);
-      setLocation(`/result/${data.code}`);
+      setTimeout(() => {
+        setLocation(`/result/${data.code}`);
+      }, 400);
     },
     onError: (error) => {
       addLog(`ERROR: UPLOAD_FAILED - ${error.message}`, 'error');
@@ -50,15 +52,30 @@ export default function Home() {
     
     addLog(`INITIATING_UPLOAD: ${file.name}...`);
     
-    const interval = setInterval(() => {
-      if (Math.random() > 0.7) {
-        addLog(`PACKET_TRANSFER: ${Math.floor(Math.random() * 100)}% COMPLETE...`);
-      }
-    }, 800);
+    const progressSteps = [
+      { delay: 100, message: 'PACKET_TRANSFER: 15% COMPLETE...' },
+      { delay: 300, message: 'PACKET_TRANSFER: 35% COMPLETE...' },
+      { delay: 600, message: 'PACKET_TRANSFER: 58% COMPLETE...' },
+      { delay: 900, message: 'PACKET_TRANSFER: 72% COMPLETE...' },
+      { delay: 1200, message: 'PACKET_TRANSFER: 85% COMPLETE...' },
+      { delay: 1500, message: 'PACKET_TRANSFER: 95% COMPLETE...' },
+      { delay: 1800, message: 'FINALIZING_TRANSFER...' },
+    ];
+
+    const timeouts: NodeJS.Timeout[] = [];
+    
+    progressSteps.forEach(({ delay, message }) => {
+      const timeout = setTimeout(() => {
+        if (uploadMutation.isPending || !uploadMutation.isIdle) {
+          addLog(message);
+        }
+      }, delay);
+      timeouts.push(timeout);
+    });
 
     uploadMutation.mutate(file, {
       onSettled: () => {
-        clearInterval(interval);
+        timeouts.forEach(clearTimeout);
       },
     });
   };
