@@ -4,31 +4,79 @@
   --font-retro: 'VT323', monospace;
   --font-pixel: 'Press Start 2P', cursive;
   --font-typewriter: 'Courier Prime', monospace;
-  
-  --color-retro-gray: #c0c0c0;
-  --color-retro-dark: #808080;
-  --color-retro-light: #ffffff;
-  --color-retro-blue: #000080;
-  --color-win-blue: #000080;
-  --color-link-blue: #0000ff;
-  --color-link-visited: #800080;
 }
 
 @layer base {
+  :root {
+    /* Bright Theme - Vintage Amber/Beige */
+    --surface: #f4ede0;
+    --panel: #d9c7a3;
+    --panel-light: #e8dcc1;
+    --border-highlight: #fff2c7;
+    --border-shadow: #9c7a4a;
+    --border-dark: #6b5433;
+    --text-primary: #2d1f0f;
+    --text-secondary: #5c4a33;
+    --accent: #8b5e34;
+    --accent-hover: #a67347;
+    --input-bg: #ffffff;
+    --terminal-bg: #1a1a1a;
+    --terminal-text: #00ff00;
+    --terminal-glow: #00ff00;
+    --link-color: #0066cc;
+    --link-active: #cc3333;
+  }
+
+  .dark {
+    /* Dark Theme - Vintage Purple */
+    --surface: #1c1029;
+    --panel: #2a153d;
+    --panel-light: #3d2252;
+    --border-highlight: #5e3d8f;
+    --border-shadow: #13091d;
+    --border-dark: #0a0510;
+    --text-primary: #e8d4ff;
+    --text-secondary: #b99dd6;
+    --accent: #a87bff;
+    --accent-hover: #c299ff;
+    --input-bg: #2a153d;
+    --terminal-bg: #0d0614;
+    --terminal-text: #8affb3;
+    --terminal-glow: #8affb3;
+    --link-color: #9d7bff;
+    --link-active: #ff6b9d;
+  }
+
+  /* Smooth theme transitions */
+  @media (prefers-reduced-motion: no-preference) {
+    body,
+    .retro-border,
+    .retro-border-inset,
+    .retro-button,
+    .retro-input,
+    div,
+    section,
+    header {
+      transition: background-color 250ms ease, 
+                  color 250ms ease, 
+                  border-color 250ms ease;
+    }
+  }
+
   body {
-    background-color: #c0c0c0;
+    background-color: var(--surface);
     font-family: 'Times New Roman', Times, serif;
-    color: black;
+    color: var(--text-primary);
   }
   
   a {
-    color: blue;
+    color: var(--link-color);
     text-decoration: underline;
     cursor: pointer;
   }
   
   a:active {
-    color: red;
+    color: var(--link-active);
   }
   
   /* Simulate default browser styles from the 90s */
@@ -57,51 +105,53 @@
 
 @layer components {
   .retro-border {
-    border-top: 2px solid #ffffff;
-    border-left: 2px solid #ffffff;
-    border-right: 2px solid #808080;
-    border-bottom: 2px solid #808080;
-    background-color: #c0c0c0;
+    border-top: 2px solid var(--border-highlight);
+    border-left: 2px solid var(--border-highlight);
+    border-right: 2px solid var(--border-shadow);
+    border-bottom: 2px solid var(--border-shadow);
+    background-color: var(--panel);
   }
 
   .retro-border-inset {
-    border-top: 2px solid #808080;
-    border-left: 2px solid #808080;
-    border-right: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
-    background-color: white;
+    border-top: 2px solid var(--border-shadow);
+    border-left: 2px solid var(--border-shadow);
+    border-right: 2px solid var(--border-highlight);
+    border-bottom: 2px solid var(--border-highlight);
+    background-color: var(--input-bg);
   }
   
   .retro-button {
-    background-color: #c0c0c0;
-    border-top: 2px solid #ffffff;
-    border-left: 2px solid #ffffff;
-    border-right: 2px solid #000000;
-    border-bottom: 2px solid #000000;
-    box-shadow: 1px 1px 0px 0px #808080;
+    background-color: var(--panel);
+    border-top: 2px solid var(--border-highlight);
+    border-left: 2px solid var(--border-highlight);
+    border-right: 2px solid var(--border-dark);
+    border-bottom: 2px solid var(--border-dark);
+    box-shadow: 1px 1px 0px 0px var(--border-shadow);
     padding: 4px 12px;
     font-family: 'MS Sans Serif', sans-serif;
     font-size: 13px;
     cursor: pointer;
+    color: var(--text-primary);
   }
   
   .retro-button:active {
-    border-top: 2px solid #000000;
-    border-left: 2px solid #000000;
-    border-right: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
+    border-top: 2px solid var(--border-dark);
+    border-left: 2px solid var(--border-dark);
+    border-right: 2px solid var(--border-highlight);
+    border-bottom: 2px solid var(--border-highlight);
     box-shadow: none;
     padding: 5px 11px 3px 13px; /* Shift text slightly */
   }
 
   .retro-input {
-    border-top: 2px solid #808080;
-    border-left: 2px solid #808080;
-    border-right: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
-    background-color: white;
+    border-top: 2px solid var(--border-shadow);
+    border-left: 2px solid var(--border-shadow);
+    border-right: 2px solid var(--border-highlight);
+    border-bottom: 2px solid var(--border-highlight);
+    background-color: var(--input-bg);
     padding: 3px 4px;
     font-family: 'Courier New', monospace;
+    color: var(--text-primary);
   }
 
   /* Marquee Animation */
@@ -154,39 +204,43 @@
   }
 
   @keyframes glow {
-    0%, 100% { text-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
-    50% { text-shadow: 0 0 10px currentColor, 0 0 20px currentColor; }
+    0%, 100% { 
+      text-shadow: 0 0 5px var(--terminal-glow), 0 0 10px var(--terminal-glow); 
+    }
+    50% { 
+      text-shadow: 0 0 10px var(--terminal-glow), 0 0 20px var(--terminal-glow); 
+    }
   }
 
   /* Custom Retro Terminal Scrollbar */
   .retro-terminal-scroll::-webkit-scrollbar {
     width: 12px;
-    background-color: #000;
+    background-color: var(--terminal-bg);
   }
 
   .retro-terminal-scroll::-webkit-scrollbar-track {
-    background: #000;
-    border-left: 1px solid #00ff00;
+    background: var(--terminal-bg);
+    border-left: 1px solid var(--terminal-text);
   }
 
   .retro-terminal-scroll::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #00ff00 0%, #008800 100%);
-    border: 1px solid #00ff00;
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.5);
+    background: linear-gradient(180deg, var(--terminal-text) 0%, color-mix(in srgb, var(--terminal-text) 50%, black) 100%);
+    border: 1px solid var(--terminal-text);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--terminal-text) 30%, transparent);
   }
 
   .retro-terminal-scroll::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #00ff88 0%, #00aa00 100%);
-    box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.8);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--terminal-text) 80%, white) 0%, var(--terminal-text) 100%);
+    box-shadow: inset 0 0 8px color-mix(in srgb, var(--terminal-text) 50%, transparent);
   }
 
   .retro-terminal-scroll::-webkit-scrollbar-corner {
-    background-color: #000;
+    background-color: var(--terminal-bg);
   }
 
   /* Firefox scrollbar */
   .retro-terminal-scroll {
     scrollbar-width: thin;
-    scrollbar-color: #00ff00 #000;
+    scrollbar-color: var(--terminal-text) var(--terminal-bg);
   }
 }

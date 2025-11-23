@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { useTerminal } from '../context/TerminalContext';
+import { useTheme } from './ThemeProvider';
 import generatedVideo from '@assets/generated_videos/retro_90s_computer_interface_with_scrolling_code_and_glitch_effects.mp4';
 
 interface RetroLayoutProps {
@@ -11,6 +12,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
   const { logs } = useTerminal();
   const terminalScrollRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (terminalScrollRef.current) {
@@ -19,37 +21,60 @@ export function RetroLayout({ children }: RetroLayoutProps) {
   }, [logs]);
 
   return (
-    <div className="min-h-screen p-2 sm:p-4 w-full bg-[#c0c0c0]">
+    <div className="min-h-screen p-2 sm:p-4 w-full" style={{ backgroundColor: 'var(--surface)' }}>
       {/* Header */}
       <header className="mb-4">
-        <div className="bg-[#000080] border-2 border-white p-3 sm:p-4 flex items-center justify-between text-white font-bold shadow-md">
+        <div className="bg-[#000080] dark:bg-[#2a0a52] border-2 border-white dark:border-[#5e3d8f] p-3 sm:p-4 flex items-center justify-between text-white font-bold shadow-md transition-colors duration-300">
           <div className="flex items-center">
-            <span className="text-lg sm:text-xl font-retro tracking-widest text-yellow-300">RETROSEND_V1.0</span>
+            <span className="text-lg sm:text-xl font-retro tracking-widest text-yellow-300 dark:text-purple-300">RETROSEND_V1.0</span>
           </div>
           
-          {/* Hamburger Menu Button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="flex flex-col gap-1 p-2 hover:bg-white/10 transition-colors rounded"
-            aria-label="Toggle menu"
-            data-testid="button-hamburger-menu"
-          >
-            <span
-              className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
-                isMenuOpen ? 'rotate-45 translate-y-1.5' : ''
-              }`}
-            ></span>
-            <span
-              className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
-                isMenuOpen ? 'opacity-0' : ''
-              }`}
-            ></span>
-            <span
-              className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
-                isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
-              }`}
-            ></span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="retro-button text-[10px] sm:text-xs px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2"
+              aria-label="Toggle theme"
+              data-testid="button-theme-toggle"
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              {theme === 'light' ? (
+                <>
+                  <span className="hidden sm:inline">DARK</span>
+                  <span className="text-xs">🌙</span>
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">LIGHT</span>
+                  <span className="text-xs">☀️</span>
+                </>
+              )}
+            </button>
+            
+            {/* Hamburger Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="flex flex-col gap-1 p-2 hover:bg-white/10 transition-colors rounded"
+              aria-label="Toggle menu"
+              data-testid="button-hamburger-menu"
+            >
+              <span
+                className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
+                  isMenuOpen ? 'rotate-45 translate-y-1.5' : ''
+                }`}
+              ></span>
+              <span
+                className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
+                  isMenuOpen ? 'opacity-0' : ''
+                }`}
+              ></span>
+              <span
+                className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
+                  isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
+                }`}
+              ></span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -117,7 +142,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
 
       {/* Marquee Banner */}
       <div className="mb-4">
-        <div className="bg-blue-900 text-white p-2 font-bold font-sans text-center marquee-container border-2 border-white text-xs sm:text-sm">
+        <div className="bg-blue-900 dark:bg-purple-900 text-white p-2 font-bold font-sans text-center marquee-container border-2 border-white dark:border-purple-400 text-xs sm:text-sm transition-colors duration-300">
           <div className="marquee-content">
             WELCOME TO RETROSEND *** UPLOAD FILES FAST *** NO LOGS *** 100% FREE *** BEST VIEWED IN NETSCAPE NAVIGATOR 4.0
           </div>
@@ -127,14 +152,14 @@ export function RetroLayout({ children }: RetroLayoutProps) {
       {/* Main Layout Grid */}
       <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,280px)_1fr] gap-4">
         {/* Main Content - appears first on mobile */}
-        <main className="bg-white border-2 border-gray-400 p-4 sm:p-6 min-h-[400px] order-1 md:order-2">
+        <main className="border-2 p-4 sm:p-6 min-h-[400px] order-1 md:order-2 transition-colors duration-300" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-shadow)' }}>
           {children}
         </main>
 
         {/* Sidebar - appears second on mobile, first on desktop */}
         <aside className="space-y-4 order-2 md:order-1">
           {/* Video Feed */}
-          <div className="border-2 border-gray-600 bg-black relative overflow-hidden h-[120px] sm:h-[140px]">
+          <div className="border-2 relative overflow-hidden h-[120px] sm:h-[140px] transition-colors duration-300" style={{ borderColor: 'var(--border-shadow)', backgroundColor: 'var(--terminal-bg)' }}>
             <video 
               src={generatedVideo} 
               autoPlay 
@@ -143,16 +168,18 @@ export function RetroLayout({ children }: RetroLayoutProps) {
               playsInline
               className="w-full h-full object-cover opacity-80"
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] sm:text-xs text-green-500 text-center font-mono p-1">
+            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] sm:text-xs text-center font-mono p-1" style={{ color: 'var(--terminal-text)' }}>
               LIVE_FEED_CAM_01
             </div>
           </div>
 
           {/* Terminal Section with CRT Effects */}
           <div 
-            className="relative bg-black border-2 border-gray-600 h-64 sm:h-80 overflow-hidden"
+            className="relative border-2 h-64 sm:h-80 overflow-hidden transition-colors duration-300"
             style={{
-              boxShadow: 'inset 0 0 40px rgba(0, 255, 0, 0.15), 0 0 20px rgba(0, 255, 0, 0.1)',
+              backgroundColor: 'var(--terminal-bg)',
+              borderColor: 'var(--border-shadow)',
+              boxShadow: 'inset 0 0 40px color-mix(in srgb, var(--terminal-glow) 15%, transparent), 0 0 20px color-mix(in srgb, var(--terminal-glow) 10%, transparent)',
             }}
           >
             {/* CRT Scanlines Effect */}
@@ -179,8 +206,8 @@ export function RetroLayout({ children }: RetroLayoutProps) {
               className="retro-terminal-scroll relative h-full overflow-y-auto p-3 font-mono text-[10px] sm:text-xs font-bold"
             >
               {/* Header Bar */}
-              <div className="border-b border-green-900/50 pb-1 mb-2 text-center bg-green-900/10 sticky top-0 backdrop-blur-sm z-20">
-                <span className="text-green-400 tracking-widest">
+              <div className="border-b pb-1 mb-2 text-center sticky top-0 backdrop-blur-sm z-20" style={{ borderColor: 'color-mix(in srgb, var(--terminal-text) 30%, transparent)', backgroundColor: 'color-mix(in srgb, var(--terminal-text) 10%, transparent)' }}>
+                <span className="tracking-widest" style={{ color: 'var(--terminal-text)' }}>
                   ◆ SYSTEM TERMINAL ◆
                 </span>
               </div>
@@ -190,12 +217,19 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                 {logs.map((log, index) => {
                   const getColorClass = () => {
                     switch (log.type) {
-                      case 'error': return 'text-red-500';
-                      case 'warning': return 'text-yellow-500';
-                      case 'success': return 'text-cyan-400';
-                      case 'system': return 'text-blue-400';
-                      default: return 'text-green-400';
+                      case 'error': return 'text-red-500 dark:text-red-400';
+                      case 'warning': return 'text-yellow-500 dark:text-yellow-400';
+                      case 'success': return 'text-cyan-400 dark:text-cyan-300';
+                      case 'system': return 'text-blue-400 dark:text-blue-300';
+                      default: return '';
                     }
+                  };
+
+                  const getInlineColor = () => {
+                    if (log.type !== 'info' && log.type !== undefined) {
+                      return undefined;
+                    }
+                    return { color: 'var(--terminal-text)' };
                   };
                   
                   const getPrefix = () => {
@@ -213,11 +247,12 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                       key={log.id} 
                       className={`break-all ${getColorClass()} transition-all duration-300`}
                       style={{
+                        ...getInlineColor(),
                         textShadow: `0 0 5px currentColor`,
                         animation: log.isNew ? 'typeIn 0.3s ease-out' : 'none',
                       }}
                     >
-                      <span className="text-green-600 text-[9px]">{log.timestamp}</span>
+                      <span className="text-[9px]" style={{ color: 'color-mix(in srgb, var(--terminal-text) 60%, transparent)' }}>{log.timestamp}</span>
                       <span className="mx-1 font-bold">{getPrefix()}</span>
                       <span className="opacity-90">{log.message}</span>
                     </div>
@@ -225,15 +260,16 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                 })}
                 
                 {/* Cursor Line */}
-                <div className="mt-3 flex items-center">
-                  <span className="text-green-400">root@retrosend</span>
-                  <span className="text-green-600 mx-1">:</span>
-                  <span className="text-cyan-400">~</span>
-                  <span className="text-green-400 mx-1">$</span>
+                <div className="mt-3 flex items-center" style={{ color: 'var(--terminal-text)' }}>
+                  <span>root@retrosend</span>
+                  <span className="mx-1" style={{ color: 'color-mix(in srgb, var(--terminal-text) 60%, transparent)' }}>:</span>
+                  <span className="text-cyan-400 dark:text-cyan-300">~</span>
+                  <span className="mx-1">$</span>
                   <span 
-                    className="inline-block w-2 h-3 bg-green-500 align-middle animate-pulse"
+                    className="inline-block w-2 h-3 align-middle animate-pulse"
                     style={{
-                      boxShadow: '0 0 10px rgba(0, 255, 0, 0.8)',
+                      backgroundColor: 'var(--terminal-text)',
+                      boxShadow: '0 0 10px color-mix(in srgb, var(--terminal-glow) 80%, transparent)',
                     }}
                   />
                 </div>
@@ -242,15 +278,15 @@ export function RetroLayout({ children }: RetroLayoutProps) {
           </div>
           
           {/* Visitor Counter */}
-          <div className="text-center border-2 border-gray-400 p-2 bg-black text-green-500 font-retro text-xs sm:text-sm">
+          <div className="text-center border-2 p-2 font-retro text-xs sm:text-sm transition-colors duration-300" style={{ borderColor: 'var(--border-shadow)', backgroundColor: 'var(--terminal-bg)', color: 'var(--terminal-text)' }}>
             VISITORS: 003482
           </div>
         </aside>
       </div>
       
       {/* Footer */}
-      <footer className="mt-6 text-center text-xs sm:text-sm font-mono">
-        <hr className="border-gray-500 mb-3" />
+      <footer className="mt-6 text-center text-xs sm:text-sm font-mono transition-colors duration-300" style={{ color: 'var(--text-secondary)' }}>
+        <hr className="mb-3" style={{ borderColor: 'var(--border-shadow)' }} />
         <div>
           (c) 1998 RetroSend Inc. All rights reserved.<br />
           Made with Notepad.
