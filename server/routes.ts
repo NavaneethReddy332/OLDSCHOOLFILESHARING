@@ -79,14 +79,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[UPLOAD] Starting upload to Backblaze: ${uniqueFileName}, Size: ${uploadedSize}`);
         
         const fileBuffer = Buffer.concat(chunks);
-        const uploadStream = new PassThrough();
-        uploadStream.end(fileBuffer);
-        
-        const b2Upload = await backblazeService.uploadFileStream(
-          uploadStream,
+        const b2Upload = await backblazeService.uploadFile(
+          fileBuffer,
           uniqueFileName,
-          mimeType,
-          uploadedSize
+          mimeType
         );
         
         const b2Duration = Date.now() - b2UploadStart;
