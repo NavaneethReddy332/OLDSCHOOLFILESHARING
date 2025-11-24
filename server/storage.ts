@@ -11,7 +11,7 @@ export interface IStorage {
   getFileByCode(code: string): Promise<File | undefined>;
   deleteFile(id: string): Promise<void>;
   cleanupExpiredFiles(): Promise<void>;
-  incrementDownloadCount(id: string): Promise<void>;
+  incrementDownloadCount(id: string, delta?: number): Promise<void>;
   
   createGuestbookEntry(entry: InsertGuestbookEntry): Promise<GuestbookEntry>;
   getAllGuestbookEntries(): Promise<GuestbookEntry[]>;
@@ -116,10 +116,10 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async incrementDownloadCount(id: string): Promise<void> {
+  async incrementDownloadCount(id: string, delta: number = 1): Promise<void> {
     const file = this.files.get(id);
     if (file) {
-      file.downloadCount++;
+      file.downloadCount += delta;
       this.files.set(id, file);
     }
   }

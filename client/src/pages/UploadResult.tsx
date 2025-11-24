@@ -44,8 +44,8 @@ export default function UploadResult() {
       
       <p style={{ textAlign: "center" }}>
         <b>Direct Link:</b><br />
-        <a href={`/download/${code}`} className="text-blue-600 dark:text-blue-400 underline">
-          http://www.retrosend.com/download/{code}
+        <a href={`/download/${code}`} className="text-blue-600 dark:text-blue-400 underline" data-testid="link-download">
+          {typeof window !== 'undefined' ? `${window.location.origin}/download/${code}` : `/download/${code}`}
         </a>
       </p>
       

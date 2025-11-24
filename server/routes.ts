@@ -197,13 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const baseUrl = req.protocol + '://' + req.get('host');
-      let downloadUrl;
-      
-      if (file.isPasswordProtected) {
-        downloadUrl = `${baseUrl}/download/${code}`;
-      } else {
-        downloadUrl = `${baseUrl}/api/download-direct/${code}`;
-      }
+      const downloadUrl = `${baseUrl}/download/${code}`;
 
       res.json({
         downloadUrl,
@@ -226,44 +220,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).send("<h1>404 - File Not Found</h1><p>This file may have expired or been deleted.</p>");
       }
 
-      if (file.isPasswordProtected) {
-        return res.redirect(302, `/download/${code}`);
-      }
-
-      if (file.maxDownloads && file.downloadCount >= file.maxDownloads) {
-        return res.status(403).send("<h1>Download Limit Reached</h1><p>This file has reached its maximum number of downloads.</p>");
-      }
-
-      await storage.incrementDownloadCount(file.id);
-
-      const fileBuffer = await backblazeService.downloadFile(file.filename);
-      
-      res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
-      res.setHeader("Content-Type", file.mimetype);
-      res.setHeader("Content-Length", file.size);
-      
-      res.send(fileBuffer);
-      
-      if (file.isOneTime || (file.maxDownloads && file.downloadCount + 1 >= file.maxDownloads)) {
-        try {
-          await storage.deleteFile(file.id);
-          if (file.b2FileId) {
-            await backblazeService.deleteFile(file.filename, file.b2FileId);
-          }
-        } catch (deleteError) {
-          console.error("File cleanup error:", deleteError);
-        }
-      }
+      // Redirect all direct download links to the download center page
+      // This prevents auto-downloading and lets users see file details first
+      return res.redirect(302, `/download/${code}`);
     } catch (error) {
-      console.error("Direct download error:", error);
-      res.status(500).send("<h1>Download Failed</h1><p>An error occurred while downloading the file.</p>");
+      console.error("Direct download redirect error:", error);
+      res.status(500).send("<h1>Error</h1><p>An error occurred while processing your request.</p>");
     }
   });
 
   app.post("/api/download/:code", async (req, res) => {
+    const startTime = Date.now();
     try {
       const { code } = req.params;
       const { password } = req.body;
+      
+      console.log(`[DOWNLOAD] Starting download for code: ${code}`);
       
       const file = await storage.getFileByCode(code);
 
@@ -287,26 +259,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.incrementDownloadCount(file.id);
 
-      const fileBuffer = await backblazeService.downloadFile(file.filename);
+      console.log(`[DOWNLOAD] Streaming file from Backblaze: ${file.filename}`);
+      const fileStream = await backblazeService.downloadFileStream(file.filename);
       
       res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
       res.setHeader("Content-Type", file.mimetype);
       res.setHeader("Content-Length", file.size);
+      res.setHeader("Cache-Control", "no-cache");
       
-      res.send(fileBuffer);
+      let streamCompleted = false;
       
-      if (file.isOneTime || (file.maxDownloads && file.downloadCount + 1 >= file.maxDownloads)) {
-        try {
-          await storage.deleteFile(file.id);
-          if (file.b2FileId) {
-            await backblazeService.deleteFile(file.filename, file.b2FileId);
-          }
-        } catch (deleteError) {
-          console.error("File cleanup error:", deleteError);
+      fileStream.on('end', () => {
+        streamCompleted = true;
+        const duration = Date.now() - startTime;
+        console.log(`[DOWNLOAD] Stream completed for ${file.originalName} in ${duration}ms`);
+      });
+
+      fileStream.on('error', async (error) => {
+        console.error(`[DOWNLOAD] Stream error:`, error);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Download stream failed" });
         }
-      }
+        if (!streamCompleted) {
+          try {
+            await storage.incrementDownloadCount(file.id, -1);
+            console.log(`[DOWNLOAD] Rolled back download count due to stream error`);
+          } catch (rollbackError) {
+            console.error(`[DOWNLOAD] Failed to rollback download count:`, rollbackError);
+          }
+        }
+        res.destroy();
+      });
+
+      fileStream.pipe(res);
+
+      res.on('finish', async () => {
+        if (streamCompleted && (file.isOneTime || (file.maxDownloads && file.downloadCount >= file.maxDownloads))) {
+          try {
+            await storage.deleteFile(file.id);
+            if (file.b2FileId) {
+              await backblazeService.deleteFile(file.filename, file.b2FileId);
+            }
+            console.log(`[DOWNLOAD] File deleted after download: ${file.originalName}`);
+          } catch (deleteError) {
+            console.error("File cleanup error:", deleteError);
+          }
+        }
+      });
     } catch (error) {
-      console.error("Download error:", error);
+      const duration = Date.now() - startTime;
+      console.error(`[DOWNLOAD] Failed after ${duration}ms:`, error);
       res.status(500).json({ error: "Download failed" });
     }
   });

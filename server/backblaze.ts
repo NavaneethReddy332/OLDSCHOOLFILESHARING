@@ -97,6 +97,28 @@ class BackblazeService {
     }
   }
 
+  async downloadFileStream(fileName: string): Promise<NodeJS.ReadableStream> {
+    await this.ensureAuthorized();
+
+    try {
+      const response = await this.b2.downloadFileByName({
+        bucketName: this.config.bucketName,
+        fileName: fileName,
+        responseType: 'stream',
+      });
+
+      return response.data as any;
+    } catch (error: any) {
+      if (error?.response?.status === 401 || error?.message?.includes('unauthorized')) {
+        this.authorizationToken = null;
+        await this.ensureAuthorized();
+        return this.downloadFileStream(fileName);
+      }
+      console.error('Backblaze download stream error:', error);
+      throw new Error('Failed to download file stream from Backblaze');
+    }
+  }
+
   async deleteFile(fileName: string, fileId: string): Promise<void> {
     await this.ensureAuthorized();
 

@@ -15,6 +15,7 @@ export default function Home() {
   const { addLog, updateLastLog } = useTerminal();
   const { toast } = useToast();
   const lastProgressRef = useRef<number>(0);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -45,6 +46,7 @@ export default function Home() {
 
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
 
         xhr.upload.addEventListener('progress', (event) => {
           if (event.lengthComputable) {
@@ -117,8 +119,9 @@ export default function Home() {
 
         xhr.addEventListener('abort', () => {
           console.warn('Upload aborted');
-          addLog(`ERROR: UPLOAD_CANCELLED`, 'error');
+          addLog(`UPLOAD_CANCELLED`, 'error');
           setIsUploading(false);
+          xhrRef.current = null;
           reject(new Error('Upload cancelled'));
         });
 
@@ -141,7 +144,18 @@ export default function Home() {
     } catch (error) {
       console.error('Upload error:', error);
       setIsUploading(false);
+      xhrRef.current = null;
       addLog(`ERROR: ${error}`, 'error');
+    }
+  };
+
+  const handleCancelUpload = () => {
+    if (xhrRef.current && isUploading) {
+      xhrRef.current.abort();
+      toast({
+        title: "Upload Cancelled",
+        description: "The file upload has been stopped.",
+      });
     }
   };
 
@@ -234,14 +248,25 @@ export default function Home() {
               
               <div>
                 <div className="font-bold mb-3">Step 3: Upload</div>
-                <button 
-                  onClick={handleUpload}
-                  disabled={!file || isUploading}
-                  className="retro-button"
-                  data-testid="button-upload"
-                >
-                  {isUploading ? "Uploading..." : "Upload Now >>"}
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleUpload}
+                    disabled={!file || isUploading}
+                    className="retro-button"
+                    data-testid="button-upload"
+                  >
+                    {isUploading ? "Uploading..." : "Upload Now >>"}
+                  </button>
+                  {isUploading && (
+                    <button 
+                      onClick={handleCancelUpload}
+                      className="retro-button bg-red-600 dark:bg-red-700"
+                      data-testid="button-cancel-upload"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
           </div>

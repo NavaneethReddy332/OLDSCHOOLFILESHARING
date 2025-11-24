@@ -23,7 +23,7 @@ export default function Download() {
   const [, params] = useRoute("/download/:code");
   const code = params?.code;
   const [, setLocation] = useLocation();
-  const { addLog } = useTerminal();
+  const { addLog, updateLastLog } = useTerminal();
   const { toast } = useToast();
   
   const [inputCode, setInputCode] = useState("");
@@ -127,7 +127,7 @@ export default function Download() {
   };
 
   const handleDownload = async () => {
-    if (!fileInfo) return;
+    if (!fileInfo || !code) return;
 
     if (fileInfo.isPasswordProtected && !downloadPassword) {
       toast({
@@ -138,20 +138,11 @@ export default function Download() {
       return;
     }
 
-    if (downloadLink && !fileInfo.isPasswordProtected) {
-      addLog(`INITIATING_DOWNLOAD...`);
-      window.location.href = downloadLink;
-      setTimeout(() => {
-        addLog(`DOWNLOAD_STARTED`);
-      }, 500);
-      return;
-    }
-
     setIsDownloading(true);
     addLog(`INITIATING_DOWNLOAD`);
 
     try {
-      const response = await fetch(`/api/download/${params.code}`, {
+      const response = await fetch(`/api/download/${code}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -166,7 +157,34 @@ export default function Download() {
         throw new Error(errorData.error || "Download failed");
       }
 
-      const blob = await response.blob();
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = response.body.getReader();
+      const contentLength = response.headers.get('Content-Length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      
+      let receivedLength = 0;
+      const chunks: Uint8Array[] = [];
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        chunks.push(value);
+        receivedLength += value.length;
+        
+        if (total > 0) {
+          const percent = Math.round((receivedLength / total) * 100);
+          if (percent % 10 === 0) {
+            updateLastLog(`DOWNLOADING  ${percent}%  ${'='.repeat(Math.floor(percent / 10))}${'-'.repeat(10 - Math.floor(percent / 10))}`);
+          }
+        }
+      }
+
+      const blob = new Blob(chunks);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
