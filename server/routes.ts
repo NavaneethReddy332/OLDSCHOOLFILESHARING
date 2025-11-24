@@ -16,6 +16,30 @@ const upload = multer({
   },
 });
 
+interface PendingUpload {
+  code: string;
+  fileName: string;
+  originalName: string;
+  size: number;
+  contentType: string;
+  timestamp: number;
+  password?: string;
+  maxDownloads?: number;
+  isOneTime?: boolean;
+}
+
+const pendingUploads = new Map<string, PendingUpload>();
+
+setInterval(() => {
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  for (const [code, upload] of pendingUploads.entries()) {
+    if (upload.timestamp < oneHourAgo) {
+      pendingUploads.delete(code);
+      console.log(`[DIRECT_UPLOAD] Cleaned up expired pending upload: ${code}`);
+    }
+  }
+}, 5 * 60 * 1000);
+
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -41,7 +65,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const uploadAuth = await backblazeService.getUploadUrlForBrowser();
       
+      pendingUploads.set(code, {
+        code,
+        fileName: uniqueFileName,
+        originalName: filename,
+        size: parseInt(size) || 0,
+        contentType,
+        timestamp: Date.now(),
+      });
+      
       console.log(`[DIRECT_UPLOAD] Generated code ${code} for direct upload: ${filename}`);
+      console.log(`[DIRECT_UPLOAD] Stored pending upload for verification`);
       
       res.json({
         code,
@@ -67,6 +101,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
+      const pendingUpload = pendingUploads.get(code);
+      if (!pendingUpload) {
+        console.error(`[DIRECT_UPLOAD] Finalize rejected - no pending upload for code: ${code}`);
+        return res.status(403).json({ 
+          error: "Invalid upload session",
+          message: "No pending upload found for this code"
+        });
+      }
+
+      if (pendingUpload.fileName !== fileName) {
+        console.error(`[DIRECT_UPLOAD] Finalize rejected - fileName mismatch for code: ${code}`);
+        pendingUploads.delete(code);
+        return res.status(403).json({ 
+          error: "Invalid upload session",
+          message: "File name does not match pending upload"
+        });
+      }
+
+      const existingFile = await storage.getFileByCode(code);
+      if (existingFile) {
+        console.error(`[DIRECT_UPLOAD] Finalize rejected - code already used: ${code}`);
+        pendingUploads.delete(code);
+        return res.status(409).json({ 
+          error: "Code already used",
+          message: "This upload code has already been finalized"
+        });
+      }
+
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
 
@@ -82,9 +144,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dbFile = await storage.createFile({
         code,
         filename: fileName,
-        originalName: originalName,
-        size: parseInt(size),
-        mimetype: contentType,
+        originalName: originalName || pendingUpload.originalName,
+        size: parseInt(size) || pendingUpload.size,
+        mimetype: contentType || pendingUpload.contentType,
         expiresAt,
         passwordHash,
         isPasswordProtected,
@@ -93,7 +155,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         b2FileId: fileId,
       });
 
+      pendingUploads.delete(code);
       console.log(`[DIRECT_UPLOAD] ✓ SUCCESS! Code: ${dbFile.code}, File: ${originalName}`);
+      console.log(`[DIRECT_UPLOAD] Removed pending upload after successful finalization`);
 
       res.json({
         code: dbFile.code,

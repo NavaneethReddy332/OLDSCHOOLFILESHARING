@@ -76,15 +76,31 @@ export default function Home() {
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
-              const response = JSON.parse(xhr.responseText);
-              addLog(`CLOUD_UPLOAD_COMPLETE: 100%`);
-              resolve(response.fileId);
+              const fileIdFromHeader = xhr.getResponseHeader('x-bz-file-id');
+              const fileNameFromHeader = xhr.getResponseHeader('x-bz-file-name');
+              
+              if (fileIdFromHeader) {
+                addLog(`CLOUD_UPLOAD_COMPLETE: 100%`);
+                console.log('B2 upload successful - File ID:', fileIdFromHeader);
+                resolve(fileIdFromHeader);
+              } else {
+                const response = JSON.parse(xhr.responseText);
+                if (response.fileId) {
+                  addLog(`CLOUD_UPLOAD_COMPLETE: 100%`);
+                  console.log('B2 upload successful - File ID:', response.fileId);
+                  resolve(response.fileId);
+                } else {
+                  console.error('B2 response missing fileId:', response);
+                  reject(new Error('B2 response missing fileId'));
+                }
+              }
             } catch (error) {
-              console.error('Error parsing B2 response:', error);
+              console.error('Error parsing B2 response:', error, 'Response:', xhr.responseText);
               reject(new Error('Invalid B2 response'));
             }
           } else {
             console.error('B2 upload failed:', xhr.status, xhr.responseText);
+            addLog(`ERROR: B2_UPLOAD_FAILED - ${xhr.status}`, 'error');
             reject(new Error(`B2 upload failed: ${xhr.status}`));
           }
         });
