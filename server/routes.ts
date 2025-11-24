@@ -59,35 +59,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${filename}`;
         
         let uploadedSize = 0;
-        const chunks: Buffer[] = [];
+        const passThrough = new PassThrough();
         
         fileStream.on('data', (chunk: Buffer) => {
           uploadedSize += chunk.length;
-          chunks.push(chunk);
+          passThrough.write(chunk);
         });
 
-        await new Promise<void>((resolve, reject) => {
-          fileStream.on('end', () => {
-            const receiveEndTime = Date.now();
-            console.log(`[UPLOAD] File stream complete - Size: ${uploadedSize} bytes, Receive time: ${receiveEndTime - receiveStartTime}ms`);
-            resolve();
-          });
-          fileStream.on('error', reject);
+        fileStream.on('end', () => {
+          passThrough.end();
+          const receiveEndTime = Date.now();
+          console.log(`[UPLOAD] File stream complete - Size: ${uploadedSize} bytes, Receive time: ${receiveEndTime - receiveStartTime}ms`);
+        });
+
+        fileStream.on('error', (err) => {
+          passThrough.destroy(err);
         });
         
         const b2UploadStart = Date.now();
-        console.log(`[UPLOAD] Starting upload to Backblaze: ${uniqueFileName}, Size: ${uploadedSize}`);
+        console.log(`[UPLOAD] Starting DIRECT STREAM upload to Backblaze: ${uniqueFileName}`);
         
-        const fileBuffer = Buffer.concat(chunks);
-        const b2Upload = await backblazeService.uploadFile(
-          fileBuffer,
+        const b2Upload = await backblazeService.uploadFileStream(
+          passThrough,
           uniqueFileName,
-          mimeType
+          mimeType,
+          uploadedSize
         );
         
         const b2Duration = Date.now() - b2UploadStart;
         const totalDuration = Date.now() - startTime;
-        console.log(`[UPLOAD] Backblaze upload complete in ${b2Duration}ms, Total: ${totalDuration}ms: ${b2Upload.fileId}`);
+        console.log(`[UPLOAD] Backblaze STREAM upload complete in ${b2Duration}ms, Total: ${totalDuration}ms: ${b2Upload.fileId}`);
 
         const { password, maxDownloads, isOneTime } = formFields;
         
@@ -111,12 +112,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           passwordHash,
           isPasswordProtected,
           maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
-          isOneTime: isOneTime === 'true' || isOneTime === true ? 1 : 0,
+          isOneTime: isOneTime === 'true' ? 1 : 0,
           b2FileId: b2Upload.fileId,
         });
 
         const finalDuration = Date.now() - startTime;
-        console.log(`[UPLOAD] Success! Code: ${dbFile.code}, Total Duration: ${finalDuration}ms (Receive: ${fileStream ? 'async' : 'N/A'}, B2: ${b2Duration}ms)`);
+        console.log(`[UPLOAD] Success! Code: ${dbFile.code}, Total Duration: ${finalDuration}ms (B2 Stream: ${b2Duration}ms)`);
 
         uploadComplete = true;
         res.json({
