@@ -27,6 +27,9 @@ export const files = pgTable("files", {
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
   
+  // Backblaze B2 Fields
+  b2FileId: text("b2_file_id"),
+  
   // Security & Privacy Fields
   passwordHash: text("password_hash"),
   isPasswordProtected: integer("is_password_protected").notNull().default(0),

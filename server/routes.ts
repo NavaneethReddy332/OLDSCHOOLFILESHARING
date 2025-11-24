@@ -1,32 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { backblazeService } from "./backblaze";
 import multer from "multer";
 import { randomBytes } from "crypto";
-import { join } from "path";
-import { mkdir } from "fs/promises";
-import { existsSync, unlinkSync } from "fs";
 import bcrypt from "bcrypt";
 import { insertGuestbookEntrySchema } from "@shared/schema";
 
-const UPLOAD_DIR = join(process.cwd(), "uploads");
-
-if (!existsSync(UPLOAD_DIR)) {
-  mkdir(UPLOAD_DIR, { recursive: true });
-}
-
-const storage_config = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${randomBytes(8).toString('hex')}-${file.originalname}`;
-    cb(null, uniqueName);
-  },
-});
-
 const upload = multer({ 
-  storage: storage_config,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 50 * 1024 * 1024,
   },
@@ -64,9 +46,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isPasswordProtected = 1;
       }
 
+      const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${req.file.originalname}`;
+      
+      const b2Upload = await backblazeService.uploadFile(
+        req.file.buffer,
+        uniqueFileName,
+        req.file.mimetype
+      );
+
       const file = await storage.createFile({
         code,
-        filename: req.file.filename,
+        filename: uniqueFileName,
         originalName: req.file.originalname,
         size: req.file.size,
         mimetype: req.file.mimetype,
@@ -75,6 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isPasswordProtected,
         maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
         isOneTime: isOneTime === 'true' || isOneTime === true ? 1 : 0,
+        b2FileId: b2Upload.fileId,
       });
 
       res.json({
@@ -188,29 +179,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.incrementDownloadCount(file.id);
 
-      const filePath = join(UPLOAD_DIR, file.filename);
+      const fileBuffer = await backblazeService.downloadFile(file.filename);
       
       res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
       res.setHeader("Content-Type", file.mimetype);
       res.setHeader("Content-Length", file.size);
       
-      res.sendFile(filePath, async (err) => {
-        if (err) {
-          console.error("File send error:", err);
-          return;
-        }
-        
-        if (file.isOneTime || (file.maxDownloads && file.downloadCount + 1 >= file.maxDownloads)) {
-          try {
-            await storage.deleteFile(file.id);
-            if (existsSync(filePath)) {
-              unlinkSync(filePath);
-            }
-          } catch (deleteError) {
-            console.error("File cleanup error:", deleteError);
+      res.send(fileBuffer);
+      
+      if (file.isOneTime || (file.maxDownloads && file.downloadCount + 1 >= file.maxDownloads)) {
+        try {
+          await storage.deleteFile(file.id);
+          if (file.b2FileId) {
+            await backblazeService.deleteFile(file.filename, file.b2FileId);
           }
+        } catch (deleteError) {
+          console.error("File cleanup error:", deleteError);
         }
-      });
+      }
     } catch (error) {
       console.error("Download error:", error);
       res.status(500).json({ error: "Download failed" });

@@ -1,5 +1,6 @@
 import { type User, type InsertUser, type File, type InsertFile, type GuestbookEntry, type InsertGuestbookEntry } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { backblazeService } from "./backblaze";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -61,6 +62,7 @@ export class MemStorage implements IStorage {
       isOneTime: insertFile.isOneTime || 0,
       passwordHash: insertFile.passwordHash || null,
       maxDownloads: insertFile.maxDownloads || null,
+      b2FileId: insertFile.b2FileId || null,
     };
     this.files.set(id, file);
     this.filesByCode.set(insertFile.code, id);
@@ -75,6 +77,13 @@ export class MemStorage implements IStorage {
     if (!file) return undefined;
     
     if (file.expiresAt <= new Date()) {
+      try {
+        if (file.b2FileId) {
+          await backblazeService.deleteFile(file.filename, file.b2FileId);
+        }
+      } catch (error) {
+        console.error(`Failed to delete expired file ${file.filename} from Backblaze:`, error);
+      }
       this.deleteFile(file.id);
       return undefined;
     }
@@ -95,6 +104,13 @@ export class MemStorage implements IStorage {
     const entries = Array.from(this.files.entries());
     for (const [id, file] of entries) {
       if (file.expiresAt <= now) {
+        try {
+          if (file.b2FileId) {
+            await backblazeService.deleteFile(file.filename, file.b2FileId);
+          }
+        } catch (error) {
+          console.error(`Failed to delete file ${file.filename} from Backblaze:`, error);
+        }
         this.deleteFile(id);
       }
     }
