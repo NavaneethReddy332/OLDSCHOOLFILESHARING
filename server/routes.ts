@@ -171,6 +171,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/file/:code/get-download-link", async (req, res) => {
+    try {
+      const { code } = req.params;
+      const { password } = req.body;
+      
+      const file = await storage.getFileByCode(code);
+
+      if (!file) {
+        return res.status(404).json({ error: "File not found or expired" });
+      }
+
+      if (file.isPasswordProtected) {
+        if (!password) {
+          return res.status(401).json({ error: "Password required" });
+        }
+        const isValid = await bcrypt.compare(password, file.passwordHash || "");
+        if (!isValid) {
+          return res.status(401).json({ error: "Incorrect password" });
+        }
+      }
+
+      if (file.maxDownloads && file.downloadCount >= file.maxDownloads) {
+        return res.status(403).json({ error: "Download limit reached" });
+      }
+
+      const baseUrl = req.protocol + '://' + req.get('host');
+      const downloadUrl = `${baseUrl}/api/download-direct/${code}`;
+
+      res.json({
+        downloadUrl,
+        expiresIn: 3600,
+        filename: file.originalName,
+        requiresPassword: file.isPasswordProtected === 1,
+      });
+    } catch (error) {
+      console.error("Get download link error:", error);
+      res.status(500).json({ error: "Failed to generate download link" });
+    }
+  });
+
+  app.get("/api/download-direct/:code", async (req, res) => {
+    try {
+      const { code } = req.params;
+      const { password } = req.query;
+      
+      const file = await storage.getFileByCode(code);
+
+      if (!file) {
+        return res.status(404).send("<h1>File not found or expired</h1>");
+      }
+
+      if (file.isPasswordProtected) {
+        if (!password) {
+          return res.status(401).send("<h1>Password required</h1><p>This file is password protected. Please access it through the download page.</p>");
+        }
+        const isValid = await bcrypt.compare(password as string, file.passwordHash || "");
+        if (!isValid) {
+          return res.status(401).send("<h1>Incorrect password</h1>");
+        }
+      }
+
+      if (file.maxDownloads && file.downloadCount >= file.maxDownloads) {
+        return res.status(403).send("<h1>Download limit reached</h1>");
+      }
+
+      await storage.incrementDownloadCount(file.id);
+
+      const fileBuffer = await backblazeService.downloadFile(file.filename);
+      
+      res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
+      res.setHeader("Content-Type", file.mimetype);
+      res.setHeader("Content-Length", file.size);
+      
+      res.send(fileBuffer);
+      
+      if (file.isOneTime || (file.maxDownloads && file.downloadCount + 1 >= file.maxDownloads)) {
+        try {
+          await storage.deleteFile(file.id);
+          if (file.b2FileId) {
+            await backblazeService.deleteFile(file.filename, file.b2FileId);
+          }
+        } catch (deleteError) {
+          console.error("File cleanup error:", deleteError);
+        }
+      }
+    } catch (error) {
+      console.error("Direct download error:", error);
+      res.status(500).send("<h1>Download failed</h1>");
+    }
+  });
+
   app.post("/api/download/:code", async (req, res) => {
     try {
       const { code } = req.params;

@@ -136,6 +136,47 @@ class BackblazeService {
     }
     return `${this.downloadUrl}/file/${this.config.bucketName}/${fileName}`;
   }
+
+  async getDownloadAuthorization(fileName: string, validDurationInSeconds: number = 3600): Promise<string> {
+    await this.ensureAuthorized();
+
+    if (!this.apiUrl) {
+      throw new Error('Not authorized with Backblaze');
+    }
+
+    try {
+      const response = await fetch(`${this.apiUrl}/b2api/v2/b2_get_download_authorization`, {
+        method: 'POST',
+        headers: {
+          'Authorization': this.authorizationToken!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bucketId: this.config.bucketId,
+          fileNamePrefix: fileName,
+          validDurationInSeconds: validDurationInSeconds,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`B2 download authorization failed: ${errorText}`);
+      }
+
+      const data = await response.json();
+      return data.authorizationToken;
+    } catch (error: any) {
+      console.error('Backblaze download authorization error:', error);
+      throw new Error('Failed to get download authorization from Backblaze');
+    }
+  }
+
+  getAuthorizedDownloadUrl(fileName: string, authToken: string): string {
+    if (!this.downloadUrl) {
+      throw new Error('Not authorized with Backblaze');
+    }
+    return `${this.downloadUrl}/file/${this.config.bucketName}/${fileName}?Authorization=${authToken}`;
+  }
 }
 
 const backblazeConfig: B2Config = {
