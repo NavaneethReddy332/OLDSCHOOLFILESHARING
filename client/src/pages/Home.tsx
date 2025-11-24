@@ -57,6 +57,13 @@ export default function Home() {
               const dots = '.'.repeat(Math.floor(percentComplete / 10));
               const spaces = '/'.repeat(10 - Math.floor(percentComplete / 10));
               updateLastLog(`UPLOADING  ${percentComplete}%  ${dots}${spaces}`);
+              
+              if (percentComplete === 100) {
+                setTimeout(() => {
+                  addLog(`PROCESSING_FILE...`);
+                  addLog(`UPLOADING_TO_CLOUD_STORAGE...`);
+                }, 100);
+              }
             }
           }
         });
