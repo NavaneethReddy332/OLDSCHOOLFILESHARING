@@ -251,7 +251,7 @@ export default function Home() {
             <div className="font-bold mb-3" style={{ color: 'var(--accent)' }}>Already have a code?</div>
             <form onSubmit={handleDownloadSubmit} className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <label className="font-semibold">Code:</label>
+                <label className="font-semibold" style={{ color: 'var(--text-primary)' }}>Code:</label>
                 <input 
                   type="text" 
                   maxLength={6}
