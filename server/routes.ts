@@ -51,17 +51,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         let uploadedSize = 0;
         const chunks: Buffer[] = [];
+        let fileTruncated = false;
         
         fileStream.on('data', (chunk: Buffer) => {
           uploadedSize += chunk.length;
           chunks.push(chunk);
         });
 
+        fileStream.on('limit', () => {
+          fileTruncated = true;
+          console.error(`[UPLOAD] File size limit exceeded for ${filename}`);
+        });
+
         await new Promise<void>((resolve, reject) => {
           fileStream.on('end', () => {
             const receiveEndTime = Date.now();
             console.log(`[UPLOAD] Received from client - Size: ${uploadedSize} bytes, Time: ${receiveEndTime - receiveStartTime}ms`);
-            resolve();
+            
+            if (fileTruncated || (fileStream as any).truncated) {
+              reject(new Error('File size exceeds 1GB limit'));
+            } else {
+              resolve();
+            }
           });
           fileStream.on('error', reject);
         });
@@ -96,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           code,
           filename: uniqueFileName,
           originalName: filename,
-          size: fileSize,
+          size: uploadedSize,
           mimetype: mimeType,
           expiresAt,
           passwordHash,
@@ -105,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isOneTime: isOneTime === 'true' ? 1 : 0,
           b2FileId: b2Upload.fileId,
         });
-        console.log(`[STREAM_UPLOAD] Database record created in ${Date.now() - dbStart}ms`);
+        console.log(`[UPLOAD] Database record created in ${Date.now() - dbStart}ms`);
 
         const totalDuration = Date.now() - startTime;
         console.log(`[UPLOAD] ✓ SUCCESS! Code: ${dbFile.code}, Total: ${totalDuration}ms (B2: ${b2Duration}ms)`);
@@ -127,7 +138,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('[UPLOAD] Error stack:', error.stack);
           
           const errorMessage = error.message || "Upload failed";
-          res.status(500).json({ 
+          const statusCode = error.message?.includes('1GB limit') ? 413 : 500;
+          
+          res.status(statusCode).json({ 
             error: errorMessage,
             details: process.env.NODE_ENV === 'development' ? error.stack : undefined
           });
