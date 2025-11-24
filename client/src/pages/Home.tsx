@@ -35,16 +35,28 @@ export default function Home() {
       
       addLog(`INITIATING_UPLOAD: ${file.name}...`);
       addLog(`FILE_SIZE: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
-      addLog(`ESTABLISHING_CONNECTION...`);
-      addLog(`UPLOADING  0%  //////////`);
+      addLog(`ESTABLISHING_DIRECT_CONNECTION...`);
       
-      const formData = new FormData();
-      formData.append("file", file);
-      if (password) formData.append("password", password);
-      if (maxDownloads) formData.append("maxDownloads", maxDownloads);
-      formData.append("isOneTime", isOneTime.toString());
+      addLog(`REQUESTING_UPLOAD_AUTHORIZATION...`);
+      const authResponse = await fetch('/api/upload/get-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type || 'application/octet-stream',
+          size: file.size,
+        }),
+      });
 
-      await new Promise((resolve, reject) => {
+      if (!authResponse.ok) {
+        throw new Error(`Failed to get upload URL: ${authResponse.status}`);
+      }
+
+      const { code, uploadUrl, authToken, fileName, originalName } = await authResponse.json();
+      addLog(`AUTHORIZATION_GRANTED - CODE: ${code}`);
+      addLog(`DIRECT_UPLOAD_TO_CLOUD  0%  //////////`);
+
+      const fileId = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhrRef.current = xhr;
 
@@ -56,14 +68,7 @@ export default function Home() {
               lastProgressRef.current = percentComplete;
               const dots = '.'.repeat(Math.floor(percentComplete / 10));
               const spaces = '/'.repeat(10 - Math.floor(percentComplete / 10));
-              updateLastLog(`UPLOADING  ${percentComplete}%  ${dots}${spaces}`);
-              
-              if (percentComplete === 100) {
-                setTimeout(() => {
-                  addLog(`PROCESSING_FILE...`);
-                  addLog(`UPLOADING_TO_CLOUD_STORAGE...`);
-                }, 100);
-              }
+              updateLastLog(`DIRECT_UPLOAD_TO_CLOUD  ${percentComplete}%  ${dots}${spaces}`);
             }
           }
         });
@@ -71,88 +76,93 @@ export default function Home() {
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
-              const data = JSON.parse(xhr.responseText);
-              console.log('Upload successful, response:', data);
-              addLog(`UPLOAD_COMPLETE: 100%`);
-              addLog(`GENERATING_HASH... OK`);
-              if (password) addLog(`ENCRYPTING...`);
-              if (maxDownloads) addLog(`LIMIT: ${maxDownloads}`);
-              if (isOneTime) addLog(`ONE_TIME_MODE`);
-              addLog(`SECURE_CODE: ${data.code}`);
-              
-              setIsUploading(false);
-              
-              setTimeout(() => {
-                console.log('Navigating to result page:', `/result/${data.code}`);
-                setLocation(`/result/${data.code}`);
-              }, 800);
-              
-              resolve(data);
+              const response = JSON.parse(xhr.responseText);
+              addLog(`CLOUD_UPLOAD_COMPLETE: 100%`);
+              resolve(response.fileId);
             } catch (error) {
-              console.error('Error parsing response:', error, 'Response text:', xhr.responseText);
-              addLog(`ERROR: INVALID_RESPONSE`, 'error');
-              setIsUploading(false);
-              toast({
-                title: "Upload Failed",
-                description: "Invalid server response",
-                variant: "destructive",
-              });
-              reject(error);
+              console.error('Error parsing B2 response:', error);
+              reject(new Error('Invalid B2 response'));
             }
           } else {
-            console.error('Upload failed with status:', xhr.status, 'Response:', xhr.responseText);
-            addLog(`ERROR: UPLOAD_FAILED - Server returned ${xhr.status}`, 'error');
-            setIsUploading(false);
-            toast({
-              title: "Upload Failed",
-              description: `Server error: ${xhr.status}`,
-              variant: "destructive",
-            });
-            reject(new Error(`Upload failed with status ${xhr.status}`));
+            console.error('B2 upload failed:', xhr.status, xhr.responseText);
+            reject(new Error(`B2 upload failed: ${xhr.status}`));
           }
         });
 
         xhr.addEventListener('error', (e) => {
-          console.error('Network error:', e);
-          addLog(`ERROR: NETWORK_ERROR`, 'error');
-          setIsUploading(false);
-          toast({
-            title: "Upload Failed",
-            description: "Network error occurred",
-            variant: "destructive",
-          });
-          reject(new Error('Network error'));
+          console.error('B2 upload network error:', e);
+          reject(new Error('B2 network error'));
         });
 
         xhr.addEventListener('abort', () => {
-          console.warn('Upload aborted');
-          addLog(`UPLOAD_CANCELLED`, 'error');
-          setIsUploading(false);
-          xhrRef.current = null;
           reject(new Error('Upload cancelled'));
         });
 
-        xhr.addEventListener('timeout', () => {
-          console.error('Upload timeout');
-          addLog(`ERROR: UPLOAD_TIMEOUT`, 'error');
-          setIsUploading(false);
-          toast({
-            title: "Upload Failed",
-            description: "Upload timeout - file may be too large",
-            variant: "destructive",
-          });
-          reject(new Error('Upload timeout'));
-        });
-
-        xhr.open('POST', '/api/upload');
-        xhr.timeout = 300000;
-        xhr.send(formData);
+        const sha1Hash = 'do_not_verify';
+        
+        xhr.open('POST', uploadUrl);
+        xhr.setRequestHeader('Authorization', authToken);
+        xhr.setRequestHeader('X-Bz-File-Name', encodeURIComponent(fileName));
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.setRequestHeader('X-Bz-Content-Sha1', sha1Hash);
+        xhr.timeout = 600000;
+        xhr.send(file);
       });
-    } catch (error) {
+
+      addLog(`FINALIZING_UPLOAD...`);
+      const finalizeResponse = await fetch('/api/upload/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          fileName,
+          originalName,
+          size: file.size,
+          contentType: file.type || 'application/octet-stream',
+          fileId,
+          password,
+          maxDownloads,
+          isOneTime,
+        }),
+      });
+
+      if (!finalizeResponse.ok) {
+        throw new Error(`Failed to finalize upload: ${finalizeResponse.status}`);
+      }
+
+      const data = await finalizeResponse.json();
+      console.log('Upload finalized, response:', data);
+      addLog(`GENERATING_HASH... OK`);
+      if (password) addLog(`ENCRYPTING...`);
+      if (maxDownloads) addLog(`LIMIT: ${maxDownloads}`);
+      if (isOneTime) addLog(`ONE_TIME_MODE`);
+      addLog(`SECURE_CODE: ${data.code}`);
+      
+      setIsUploading(false);
+      
+      setTimeout(() => {
+        console.log('Navigating to result page:', `/result/${data.code}`);
+        setLocation(`/result/${data.code}`);
+      }, 800);
+    } catch (error: any) {
       console.error('Upload error:', error);
       setIsUploading(false);
       xhrRef.current = null;
-      addLog(`ERROR: ${error}`, 'error');
+      
+      if (error.message?.includes('cancelled')) {
+        addLog(`UPLOAD_CANCELLED`, 'error');
+        toast({
+          title: "Upload Cancelled",
+          description: "The file upload has been stopped.",
+        });
+      } else {
+        addLog(`ERROR: ${error.message || error}`, 'error');
+        toast({
+          title: "Upload Failed",
+          description: error.message || "An error occurred during upload",
+          variant: "destructive",
+        });
+      }
     }
   };
 
