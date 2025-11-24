@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { useTerminal } from '../context/TerminalContext';
 import { useTheme } from './ThemeProvider';
 import { Moon, Sun } from 'lucide-react';
-import generatedVideo from '@assets/generated_videos/retro_90s_computer_interface_with_scrolling_code_and_glitch_effects.mp4';
+import generatedVideo from '@assets/Cinematic_Tech_Startup_Intro_Animation_1764007246565.mp4';
 
 interface RetroLayoutProps {
   children: React.ReactNode;
@@ -164,7 +164,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
       </div>
       
       {/* Main Layout Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,280px)_1fr] gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(320px,400px)_1fr] gap-4">
         {/* Main Content - appears first on mobile */}
         <main className="border-2 p-4 sm:p-6 min-h-[400px] order-1 md:order-2 transition-colors duration-300" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-shadow)' }}>
           {children}
@@ -272,21 +272,6 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                     </div>
                   );
                 })}
-                
-                {/* Cursor Line */}
-                <div className="mt-3 flex items-center" style={{ color: 'var(--terminal-text)' }}>
-                  <span>root@retrosend</span>
-                  <span className="mx-1" style={{ color: 'color-mix(in srgb, var(--terminal-text) 60%, transparent)' }}>:</span>
-                  <span className="text-cyan-400 dark:text-cyan-300">~</span>
-                  <span className="mx-1">$</span>
-                  <span 
-                    className="inline-block w-2 h-3 align-middle animate-pulse"
-                    style={{
-                      backgroundColor: 'var(--terminal-text)',
-                      boxShadow: '0 0 10px color-mix(in srgb, var(--terminal-glow) 80%, transparent)',
-                    }}
-                  />
-                </div>
               </div>
             </div>
           </div>

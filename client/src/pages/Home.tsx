@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { RetroLayout } from "../components/RetroLayout";
 import { useTerminal } from "../context/TerminalContext";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,16 @@ export default function Home() {
   const { toast } = useToast();
   const lastProgressRef = useRef<number>(0);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const cloudUploadIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (cloudUploadIntervalRef.current) {
+        clearInterval(cloudUploadIntervalRef.current);
+        cloudUploadIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -59,13 +69,24 @@ export default function Home() {
               updateLastLog(`STREAMING_TO_SERVER  ${percentComplete}%  ${dots}${spaces}`);
               
               if (percentComplete === 100) {
-                addLog(`UPLOADING_TO_CLOUD...`);
+                const spinnerChars = ['|', '/', '-', '\\'];
+                let spinnerIndex = 0;
+                addLog(`UPLOADING TO BACKBLAZE ${spinnerChars[0]}`);
+                
+                cloudUploadIntervalRef.current = setInterval(() => {
+                  spinnerIndex = (spinnerIndex + 1) % spinnerChars.length;
+                  updateLastLog(`UPLOADING TO BACKBLAZE ${spinnerChars[spinnerIndex]}`);
+                }, 150);
               }
             }
           }
         });
 
         xhr.addEventListener('load', () => {
+          if (cloudUploadIntervalRef.current) {
+            clearInterval(cloudUploadIntervalRef.current);
+            cloudUploadIntervalRef.current = null;
+          }
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const response = JSON.parse(xhr.responseText);
@@ -89,12 +110,28 @@ export default function Home() {
         });
 
         xhr.addEventListener('error', (e) => {
+          if (cloudUploadIntervalRef.current) {
+            clearInterval(cloudUploadIntervalRef.current);
+            cloudUploadIntervalRef.current = null;
+          }
           console.error('Upload network error:', e);
           reject(new Error('Network error'));
         });
 
         xhr.addEventListener('abort', () => {
+          if (cloudUploadIntervalRef.current) {
+            clearInterval(cloudUploadIntervalRef.current);
+            cloudUploadIntervalRef.current = null;
+          }
           reject(new Error('Upload cancelled'));
+        });
+
+        xhr.addEventListener('timeout', () => {
+          if (cloudUploadIntervalRef.current) {
+            clearInterval(cloudUploadIntervalRef.current);
+            cloudUploadIntervalRef.current = null;
+          }
+          reject(new Error('Upload timeout'));
         });
 
         xhr.open('POST', '/api/upload');

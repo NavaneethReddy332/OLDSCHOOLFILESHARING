@@ -2,7 +2,6 @@ import { useLocation, useRoute } from "wouter";
 import { RetroLayout } from "../components/RetroLayout";
 import { useTerminal } from "../context/TerminalContext";
 import { useEffect } from "react";
-import successVideo from '@assets/Game_Intro_Video_Generation_1763880759830.mp4';
 
 export default function UploadResult() {
   const [, params] = useRoute("/result/:code");
@@ -19,16 +18,7 @@ export default function UploadResult() {
     <RetroLayout>
       <center>
         <h1><span className="text-green-600 dark:text-green-400">SUCCESS!</span></h1>
-        <video 
-          src={successVideo} 
-          autoPlay 
-          loop 
-          muted 
-          playsInline
-          className="border-2 border-gray-800 dark:border-gray-200"
-          width="300"
-        />
-        <br /><br />
+        <br />
         <p>Your file has been uploaded to the World Wide Web.</p>
       </center>
       
