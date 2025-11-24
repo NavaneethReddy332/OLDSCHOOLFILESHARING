@@ -182,9 +182,6 @@ export function RetroLayout({ children }: RetroLayoutProps) {
               playsInline
               className="w-full h-full object-cover opacity-80"
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] sm:text-xs text-center font-mono p-1" style={{ color: 'var(--terminal-text)' }}>
-              LIVE_FEED_CAM_01
-            </div>
           </div>
 
           {/* Terminal Section with CRT Effects */}
