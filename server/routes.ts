@@ -59,36 +59,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${filename}`;
         
         let uploadedSize = 0;
-        const passThrough = new PassThrough();
+        const chunks: Buffer[] = [];
         
         fileStream.on('data', (chunk: Buffer) => {
           uploadedSize += chunk.length;
-          passThrough.write(chunk);
+          chunks.push(chunk);
         });
 
-        fileStream.on('end', () => {
-          passThrough.end();
-          const receiveEndTime = Date.now();
-          console.log(`[UPLOAD] File stream complete - Size: ${uploadedSize} bytes, Receive time: ${receiveEndTime - receiveStartTime}ms`);
-        });
-
-        fileStream.on('error', (err) => {
-          passThrough.destroy(err);
+        await new Promise<void>((resolve, reject) => {
+          fileStream.on('end', () => {
+            const receiveEndTime = Date.now();
+            console.log(`[UPLOAD] Received from client - Size: ${uploadedSize} bytes, Time: ${receiveEndTime - receiveStartTime}ms`);
+            resolve();
+          });
+          fileStream.on('error', reject);
         });
         
         const b2UploadStart = Date.now();
-        console.log(`[UPLOAD] Starting DIRECT STREAM upload to Backblaze: ${uniqueFileName}`);
+        console.log(`[UPLOAD] Uploading to Backblaze: ${uniqueFileName}, Size: ${uploadedSize} bytes`);
         
-        const b2Upload = await backblazeService.uploadFileStream(
-          passThrough,
+        const fileBuffer = Buffer.concat(chunks);
+        const b2Upload = await backblazeService.uploadFile(
+          fileBuffer,
           uniqueFileName,
-          mimeType,
-          uploadedSize
+          mimeType
         );
         
         const b2Duration = Date.now() - b2UploadStart;
-        const totalDuration = Date.now() - startTime;
-        console.log(`[UPLOAD] Backblaze STREAM upload complete in ${b2Duration}ms, Total: ${totalDuration}ms: ${b2Upload.fileId}`);
+        console.log(`[UPLOAD] Backblaze upload complete in ${b2Duration}ms: ${b2Upload.fileId}`);
 
         const { password, maxDownloads, isOneTime } = formFields;
         
@@ -96,12 +94,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let isPasswordProtected = 0;
         
         if (password && password.trim() !== "") {
+          const hashStart = Date.now();
           passwordHash = await bcrypt.hash(password, 10);
           isPasswordProtected = 1;
-          console.log('[UPLOAD] Password protection enabled');
+          console.log(`[UPLOAD] Password hashed in ${Date.now() - hashStart}ms`);
         }
 
-        console.log('[UPLOAD] Creating database record');
+        const dbStart = Date.now();
         const dbFile = await storage.createFile({
           code,
           filename: uniqueFileName,
@@ -115,9 +114,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isOneTime: isOneTime === 'true' ? 1 : 0,
           b2FileId: b2Upload.fileId,
         });
+        console.log(`[UPLOAD] Database record created in ${Date.now() - dbStart}ms`);
 
-        const finalDuration = Date.now() - startTime;
-        console.log(`[UPLOAD] Success! Code: ${dbFile.code}, Total Duration: ${finalDuration}ms (B2 Stream: ${b2Duration}ms)`);
+        const totalDuration = Date.now() - startTime;
+        console.log(`[UPLOAD] ✓ SUCCESS! Code: ${dbFile.code}, Total: ${totalDuration}ms (Receive: ${receiveStartTime ? 'done' : 'N/A'}, B2: ${b2Duration}ms)`);
 
         uploadComplete = true;
         res.json({
@@ -132,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error: any) {
         if (!uploadComplete) {
           const duration = Date.now() - startTime;
-          console.error(`[UPLOAD] Failed after ${duration}ms:`, error);
+          console.error(`[UPLOAD] ✗ FAILED after ${duration}ms:`, error);
           console.error('[UPLOAD] Error stack:', error.stack);
           
           const errorMessage = error.message || "Upload failed";
