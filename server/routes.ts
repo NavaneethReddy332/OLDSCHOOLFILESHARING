@@ -197,11 +197,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const baseUrl = req.protocol + '://' + req.get('host');
-      const downloadUrl = `${baseUrl}/api/download-direct/${code}`;
+      let downloadUrl;
+      
+      if (file.isPasswordProtected) {
+        downloadUrl = `${baseUrl}/download/${code}`;
+      } else {
+        downloadUrl = `${baseUrl}/api/download-direct/${code}`;
+      }
 
       res.json({
         downloadUrl,
-        expiresIn: 3600,
         filename: file.originalName,
         requiresPassword: file.isPasswordProtected === 1,
       });
@@ -214,26 +219,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/download-direct/:code", async (req, res) => {
     try {
       const { code } = req.params;
-      const { password } = req.query;
       
       const file = await storage.getFileByCode(code);
 
       if (!file) {
-        return res.status(404).send("<h1>File not found or expired</h1>");
+        return res.status(404).send("<h1>404 - File Not Found</h1><p>This file may have expired or been deleted.</p>");
       }
 
       if (file.isPasswordProtected) {
-        if (!password) {
-          return res.status(401).send("<h1>Password required</h1><p>This file is password protected. Please access it through the download page.</p>");
-        }
-        const isValid = await bcrypt.compare(password as string, file.passwordHash || "");
-        if (!isValid) {
-          return res.status(401).send("<h1>Incorrect password</h1>");
-        }
+        return res.redirect(302, `/download/${code}`);
       }
 
       if (file.maxDownloads && file.downloadCount >= file.maxDownloads) {
-        return res.status(403).send("<h1>Download limit reached</h1>");
+        return res.status(403).send("<h1>Download Limit Reached</h1><p>This file has reached its maximum number of downloads.</p>");
       }
 
       await storage.incrementDownloadCount(file.id);
@@ -258,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Direct download error:", error);
-      res.status(500).send("<h1>Download failed</h1>");
+      res.status(500).send("<h1>Download Failed</h1><p>An error occurred while downloading the file.</p>");
     }
   });
 

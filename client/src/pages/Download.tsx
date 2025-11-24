@@ -62,6 +62,13 @@ export default function Download() {
   const [showPasswordInput, setShowPasswordInput] = useState(false);
   const [downloadLink, setDownloadLink] = useState<string | null>(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    if (fileInfo?.isPasswordProtected) {
+      setShowPasswordInput(true);
+    }
+  }, [fileInfo]);
 
   const handleGetDownloadLink = async () => {
     if (!code || !fileInfo) return;
@@ -95,20 +102,23 @@ export default function Download() {
       }
 
       const data = await response.json();
-      let finalDownloadUrl = data.downloadUrl;
+      setDownloadLink(data.downloadUrl);
       
-      if (data.requiresPassword && downloadPassword) {
-        finalDownloadUrl += `?password=${encodeURIComponent(downloadPassword)}`;
+      if (data.requiresPassword) {
+        addLog(`LINK_GENERATED_SUCCESSFULLY`);
+        addLog(`PASSWORD_REQUIRED_AT_DOWNLOAD`);
+      } else {
+        addLog(`LINK_GENERATED_SUCCESSFULLY`);
+        addLog(`LINK_VALID_UNTIL_FILE_EXPIRES`);
       }
       
-      setDownloadLink(finalDownloadUrl);
-      addLog(`LINK_GENERATED_SUCCESSFULLY`);
-      addLog(`LINK_VALID_UNTIL_FILE_EXPIRES`);
       setIsGeneratingLink(false);
       
       toast({
         title: "Download Link Ready",
-        description: "Your shareable download link has been generated!",
+        description: data.requiresPassword 
+          ? "Recipients will need to enter the password to download"
+          : "Your shareable download link has been generated!",
       });
     } catch (error) {
       addLog(`ERROR: ${error instanceof Error ? error.message : 'Failed to generate link'}`, 'error');
@@ -116,13 +126,74 @@ export default function Download() {
     }
   };
 
-  const handleDownload = () => {
-    if (downloadLink) {
+  const handleDownload = async () => {
+    if (!fileInfo) return;
+
+    if (fileInfo.isPasswordProtected && !downloadPassword) {
+      toast({
+        title: "Password Required",
+        description: "Please enter the password to download this file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (downloadLink && !fileInfo.isPasswordProtected) {
       addLog(`INITIATING_DOWNLOAD...`);
       window.location.href = downloadLink;
       setTimeout(() => {
         addLog(`DOWNLOAD_STARTED`);
       }, 500);
+      return;
+    }
+
+    setIsDownloading(true);
+    addLog(`INITIATING_DOWNLOAD`);
+
+    try {
+      const response = await fetch(`/api/download/${params.code}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          password: downloadPassword || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Download failed");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileInfo.originalName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      addLog(`DOWNLOAD_COMPLETE`);
+      toast({
+        title: "Download Complete",
+        description: "Your file has been downloaded successfully.",
+      });
+    } catch (error) {
+      addLog(
+        `ERROR: ${error instanceof Error ? error.message : "Download failed"}`,
+        "error"
+      );
+      toast({
+        title: "Download Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to download file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -255,25 +326,32 @@ export default function Download() {
                   Copy
                 </button>
               </div>
-              <small className="block mt-2">This link works on any device/browser. Share it anywhere!</small>
+              <small className="block mt-2">
+                {fileInfo?.isPasswordProtected 
+                  ? "This link works on any device. Recipients will need the password to download."
+                  : "This link works on any device/browser. Share it anywhere!"}
+              </small>
             </div>
           )}
           
           <center>
-            {!downloadLink ? (
-              <button 
-                onClick={handleGetDownloadLink} 
-                disabled={isGeneratingLink}
-                className="retro-button font-bold text-lg py-2 px-8" 
-                data-testid="button-get-download-link"
-              >
-                {isGeneratingLink ? "GENERATING..." : "GET DOWNLOAD LINK"}
-              </button>
-            ) : (
-              <button onClick={handleDownload} className="retro-button font-bold text-lg py-2 px-8" data-testid="button-download-now">
-                DOWNLOAD NOW
-              </button>
-            )}
+            <button 
+              onClick={handleDownload} 
+              disabled={isDownloading}
+              className="retro-button font-bold text-lg py-2 px-8" 
+              data-testid="button-download"
+            >
+              {isDownloading ? "DOWNLOADING..." : "DOWNLOAD NOW"}
+            </button>
+            {' '}
+            <button 
+              onClick={handleGetDownloadLink} 
+              disabled={isGeneratingLink}
+              className="retro-button text-sm py-1 px-4" 
+              data-testid="button-get-shareable-link"
+            >
+              {isGeneratingLink ? "Generating..." : "Get Shareable Link"}
+            </button>
             <br /><br />
             <small>Checked by Norton AntiVirus</small>
           </center>
