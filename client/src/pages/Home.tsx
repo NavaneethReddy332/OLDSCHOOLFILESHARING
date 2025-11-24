@@ -175,7 +175,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
           {/* Upload Section */}
           <div className="space-y-4">
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+            <form onSubmit={(e) => e.preventDefault()} autoComplete="off" className="space-y-4">
               <div>
                 <div className="font-bold mb-3">Step 1: Select File</div>
                 <input 
@@ -197,6 +197,7 @@ export default function Home() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Leave blank for no password"
                       className="retro-input w-full text-sm"
+                      autoComplete="new-password"
                       data-testid="input-password"
                     />
                     <PasswordStrengthMeter password={password} />

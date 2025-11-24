@@ -217,6 +217,7 @@ export default function Download() {
                 onChange={(e) => setDownloadPassword(e.target.value)}
                 className="retro-input w-full mb-2"
                 placeholder="Enter file password"
+                autoComplete="off"
                 data-testid="input-download-password"
               />
             </div>
