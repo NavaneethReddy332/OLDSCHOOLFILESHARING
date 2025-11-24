@@ -157,6 +157,7 @@ export default function Download() {
                value={inputCode}
                onChange={(e) => setInputCode(e.target.value)}
                className="retro-input" 
+              placeholder="123456"
                size={10}
                maxLength={6}
                data-testid="input-download-code"
