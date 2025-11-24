@@ -2,181 +2,16 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { backblazeService } from "./backblaze";
-import multer from "multer";
 import { randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import { insertGuestbookEntrySchema } from "@shared/schema";
 import Busboy from "busboy";
-import { PassThrough } from "stream";
-
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 1024 * 1024 * 1024,
-  },
-});
-
-interface PendingUpload {
-  code: string;
-  fileName: string;
-  originalName: string;
-  size: number;
-  contentType: string;
-  timestamp: number;
-  password?: string;
-  maxDownloads?: number;
-  isOneTime?: boolean;
-}
-
-const pendingUploads = new Map<string, PendingUpload>();
-
-setInterval(() => {
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
-  for (const [code, upload] of pendingUploads.entries()) {
-    if (upload.timestamp < oneHourAgo) {
-      pendingUploads.delete(code);
-      console.log(`[DIRECT_UPLOAD] Cleaned up expired pending upload: ${code}`);
-    }
-  }
-}, 5 * 60 * 1000);
 
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  app.post("/api/upload/get-url", async (req, res) => {
-    try {
-      const { filename, contentType, size } = req.body;
-      
-      if (!filename || !contentType) {
-        return res.status(400).json({ error: "Missing filename or contentType" });
-      }
-
-      let code = generateCode();
-      let existingFile = await storage.getFileByCode(code);
-      
-      while (existingFile) {
-        code = generateCode();
-        existingFile = await storage.getFileByCode(code);
-      }
-
-      const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${filename}`;
-      
-      const uploadAuth = await backblazeService.getUploadUrlForBrowser();
-      
-      pendingUploads.set(code, {
-        code,
-        fileName: uniqueFileName,
-        originalName: filename,
-        size: parseInt(size) || 0,
-        contentType,
-        timestamp: Date.now(),
-      });
-      
-      console.log(`[DIRECT_UPLOAD] Generated code ${code} for direct upload: ${filename}`);
-      console.log(`[DIRECT_UPLOAD] Stored pending upload for verification`);
-      
-      res.json({
-        code,
-        uploadUrl: uploadAuth.uploadUrl,
-        authToken: uploadAuth.authToken,
-        fileName: uniqueFileName,
-        originalName: filename,
-      });
-    } catch (error: any) {
-      console.error('[DIRECT_UPLOAD] Failed to get upload URL:', error);
-      res.status(500).json({ 
-        error: "Failed to get upload URL",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  });
-
-  app.post("/api/upload/finalize", async (req, res) => {
-    try {
-      const { code, fileName, originalName, size, contentType, fileId, password, maxDownloads, isOneTime } = req.body;
-      
-      if (!code || !fileName || !fileId) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      const pendingUpload = pendingUploads.get(code);
-      if (!pendingUpload) {
-        console.error(`[DIRECT_UPLOAD] Finalize rejected - no pending upload for code: ${code}`);
-        return res.status(403).json({ 
-          error: "Invalid upload session",
-          message: "No pending upload found for this code"
-        });
-      }
-
-      if (pendingUpload.fileName !== fileName) {
-        console.error(`[DIRECT_UPLOAD] Finalize rejected - fileName mismatch for code: ${code}`);
-        pendingUploads.delete(code);
-        return res.status(403).json({ 
-          error: "Invalid upload session",
-          message: "File name does not match pending upload"
-        });
-      }
-
-      const existingFile = await storage.getFileByCode(code);
-      if (existingFile) {
-        console.error(`[DIRECT_UPLOAD] Finalize rejected - code already used: ${code}`);
-        pendingUploads.delete(code);
-        return res.status(409).json({ 
-          error: "Code already used",
-          message: "This upload code has already been finalized"
-        });
-      }
-
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24);
-
-      let passwordHash = null;
-      let isPasswordProtected = 0;
-      
-      if (password && password.trim() !== "") {
-        passwordHash = await bcrypt.hash(password, 10);
-        isPasswordProtected = 1;
-        console.log(`[DIRECT_UPLOAD] Password protection enabled for ${code}`);
-      }
-
-      const dbFile = await storage.createFile({
-        code,
-        filename: fileName,
-        originalName: originalName || pendingUpload.originalName,
-        size: parseInt(size) || pendingUpload.size,
-        mimetype: contentType || pendingUpload.contentType,
-        expiresAt,
-        passwordHash,
-        isPasswordProtected,
-        maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
-        isOneTime: isOneTime === 'true' || isOneTime === true ? 1 : 0,
-        b2FileId: fileId,
-      });
-
-      pendingUploads.delete(code);
-      console.log(`[DIRECT_UPLOAD] ✓ SUCCESS! Code: ${dbFile.code}, File: ${originalName}`);
-      console.log(`[DIRECT_UPLOAD] Removed pending upload after successful finalization`);
-
-      res.json({
-        code: dbFile.code,
-        originalName: dbFile.originalName,
-        size: dbFile.size,
-        expiresAt: dbFile.expiresAt,
-        isPasswordProtected: dbFile.isPasswordProtected,
-        maxDownloads: dbFile.maxDownloads,
-        isOneTime: dbFile.isOneTime,
-      });
-    } catch (error: any) {
-      console.error('[DIRECT_UPLOAD] Finalize failed:', error);
-      res.status(500).json({ 
-        error: "Failed to finalize upload",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  });
-
   app.post("/api/upload", async (req, res) => {
     const startTime = Date.now();
     const busboy = Busboy({ 
@@ -191,7 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     busboy.on('field', (fieldname, value) => {
       formFields[fieldname] = value;
-      console.log(`[UPLOAD] Received field: ${fieldname}`);
+      console.log(`[UPLOAD] Received field: ${fieldname}=${value}`);
     });
     
     busboy.on('file', async (fieldname, fileStream, info) => {
@@ -238,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const b2Upload = await backblazeService.uploadFile(
           fileBuffer,
           uniqueFileName,
-          mimeType
+          mimeType || 'application/octet-stream'
         );
         
         const b2Duration = Date.now() - b2UploadStart;
@@ -261,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           code,
           filename: uniqueFileName,
           originalName: filename,
-          size: uploadedSize,
+          size: fileSize,
           mimetype: mimeType,
           expiresAt,
           passwordHash,
@@ -270,10 +105,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isOneTime: isOneTime === 'true' ? 1 : 0,
           b2FileId: b2Upload.fileId,
         });
-        console.log(`[UPLOAD] Database record created in ${Date.now() - dbStart}ms`);
+        console.log(`[STREAM_UPLOAD] Database record created in ${Date.now() - dbStart}ms`);
 
         const totalDuration = Date.now() - startTime;
-        console.log(`[UPLOAD] ✓ SUCCESS! Code: ${dbFile.code}, Total: ${totalDuration}ms (Receive: ${receiveStartTime ? 'done' : 'N/A'}, B2: ${b2Duration}ms)`);
+        console.log(`[UPLOAD] ✓ SUCCESS! Code: ${dbFile.code}, Total: ${totalDuration}ms (B2: ${b2Duration}ms)`);
 
         uploadComplete = true;
         res.json({

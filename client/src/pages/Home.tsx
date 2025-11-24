@@ -35,28 +35,16 @@ export default function Home() {
       
       addLog(`INITIATING_UPLOAD: ${file.name}...`);
       addLog(`FILE_SIZE: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
-      addLog(`ESTABLISHING_DIRECT_CONNECTION...`);
-      
-      addLog(`REQUESTING_UPLOAD_AUTHORIZATION...`);
-      const authResponse = await fetch('/api/upload/get-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type || 'application/octet-stream',
-          size: file.size,
-        }),
-      });
+      addLog(`STREAMING_TO_SERVER  0%  //////////`);
 
-      if (!authResponse.ok) {
-        throw new Error(`Failed to get upload URL: ${authResponse.status}`);
-      }
+      const formData = new FormData();
+      formData.append('fileSize', file.size.toString());
+      if (password) formData.append('password', password);
+      if (maxDownloads) formData.append('maxDownloads', maxDownloads);
+      if (isOneTime) formData.append('isOneTime', 'true');
+      formData.append('file', file);
 
-      const { code, uploadUrl, authToken, fileName, originalName } = await authResponse.json();
-      addLog(`AUTHORIZATION_GRANTED - CODE: ${code}`);
-      addLog(`DIRECT_UPLOAD_TO_CLOUD  0%  //////////`);
-
-      const fileId = await new Promise<string>((resolve, reject) => {
+      const data = await new Promise<any>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhrRef.current = xhr;
 
@@ -68,7 +56,7 @@ export default function Home() {
               lastProgressRef.current = percentComplete;
               const dots = '.'.repeat(Math.floor(percentComplete / 10));
               const spaces = '/'.repeat(10 - Math.floor(percentComplete / 10));
-              updateLastLog(`DIRECT_UPLOAD_TO_CLOUD  ${percentComplete}%  ${dots}${spaces}`);
+              updateLastLog(`STREAMING_TO_SERVER  ${percentComplete}%  ${dots}${spaces}`);
             }
           }
         });
@@ -76,80 +64,42 @@ export default function Home() {
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
-              const fileIdFromHeader = xhr.getResponseHeader('x-bz-file-id');
-              const fileNameFromHeader = xhr.getResponseHeader('x-bz-file-name');
-              
-              if (fileIdFromHeader) {
-                addLog(`CLOUD_UPLOAD_COMPLETE: 100%`);
-                console.log('B2 upload successful - File ID:', fileIdFromHeader);
-                resolve(fileIdFromHeader);
-              } else {
-                const response = JSON.parse(xhr.responseText);
-                if (response.fileId) {
-                  addLog(`CLOUD_UPLOAD_COMPLETE: 100%`);
-                  console.log('B2 upload successful - File ID:', response.fileId);
-                  resolve(response.fileId);
-                } else {
-                  console.error('B2 response missing fileId:', response);
-                  reject(new Error('B2 response missing fileId'));
-                }
-              }
+              const response = JSON.parse(xhr.responseText);
+              addLog(`UPLOAD_COMPLETE: 100%`);
+              console.log('Upload successful, response:', response);
+              resolve(response);
             } catch (error) {
-              console.error('Error parsing B2 response:', error, 'Response:', xhr.responseText);
-              reject(new Error('Invalid B2 response'));
+              console.error('Error parsing response:', error, 'Response:', xhr.responseText);
+              reject(new Error('Invalid server response'));
             }
           } else {
-            console.error('B2 upload failed:', xhr.status, xhr.responseText);
-            addLog(`ERROR: B2_UPLOAD_FAILED - ${xhr.status}`, 'error');
-            reject(new Error(`B2 upload failed: ${xhr.status}`));
+            console.error('Upload failed:', xhr.status, xhr.responseText);
+            addLog(`ERROR: UPLOAD_FAILED - ${xhr.status}`, 'error');
+            try {
+              const errorResponse = JSON.parse(xhr.responseText);
+              reject(new Error(errorResponse.error || `Upload failed: ${xhr.status}`));
+            } catch {
+              reject(new Error(`Upload failed: ${xhr.status}`));
+            }
           }
         });
 
         xhr.addEventListener('error', (e) => {
-          console.error('B2 upload network error:', e);
-          reject(new Error('B2 network error'));
+          console.error('Upload network error:', e);
+          reject(new Error('Network error'));
         });
 
         xhr.addEventListener('abort', () => {
           reject(new Error('Upload cancelled'));
         });
 
-        const sha1Hash = 'do_not_verify';
-        
-        xhr.open('POST', uploadUrl);
-        xhr.setRequestHeader('Authorization', authToken);
-        xhr.setRequestHeader('X-Bz-File-Name', encodeURIComponent(fileName));
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-        xhr.setRequestHeader('X-Bz-Content-Sha1', sha1Hash);
+        xhr.open('POST', '/api/upload');
         xhr.timeout = 600000;
-        xhr.send(file);
+        xhr.send(formData);
       });
 
-      addLog(`FINALIZING_UPLOAD...`);
-      const finalizeResponse = await fetch('/api/upload/finalize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code,
-          fileName,
-          originalName,
-          size: file.size,
-          contentType: file.type || 'application/octet-stream',
-          fileId,
-          password,
-          maxDownloads,
-          isOneTime,
-        }),
-      });
-
-      if (!finalizeResponse.ok) {
-        throw new Error(`Failed to finalize upload: ${finalizeResponse.status}`);
-      }
-
-      const data = await finalizeResponse.json();
-      console.log('Upload finalized, response:', data);
-      addLog(`GENERATING_HASH... OK`);
-      if (password) addLog(`ENCRYPTING...`);
+      addLog(`PROCESSING_COMPLETE`);
+      if (password) addLog(`PASSWORD_PROTECTED`);
       if (maxDownloads) addLog(`LIMIT: ${maxDownloads}`);
       if (isOneTime) addLog(`ONE_TIME_MODE`);
       addLog(`SECURE_CODE: ${data.code}`);

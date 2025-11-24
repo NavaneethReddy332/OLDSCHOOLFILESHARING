@@ -113,23 +113,34 @@ class BackblazeService {
         bucketId: this.config.bucketId,
       });
 
-      const uploadParams: any = {
-        uploadUrl: uploadUrlResponse.data.uploadUrl,
-        uploadAuthToken: uploadUrlResponse.data.authorizationToken,
-        fileName: fileName,
-        data: fileStream,
-        contentType: contentType,
+      const headers: Record<string, string> = {
+        'Authorization': uploadUrlResponse.data.authorizationToken,
+        'X-Bz-File-Name': encodeURIComponent(fileName),
+        'Content-Type': contentType || 'application/octet-stream',
+        'X-Bz-Content-Sha1': 'do_not_verify',
       };
-      
+
       if (fileSize > 0) {
-        uploadParams.contentLength = fileSize;
+        headers['Content-Length'] = fileSize.toString();
       }
 
-      const uploadResponse = await this.b2.uploadFile(uploadParams);
+      const response = await fetch(uploadUrlResponse.data.uploadUrl, {
+        method: 'POST',
+        headers: headers,
+        body: fileStream as any,
+        duplex: 'half' as any,
+      });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`B2 upload failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      
       return {
-        fileId: uploadResponse.data.fileId,
-        fileName: uploadResponse.data.fileName,
+        fileId: result.fileId,
+        fileName: result.fileName,
       };
     } catch (error: any) {
       if (error?.response?.status === 401 || error?.message?.includes('unauthorized')) {
