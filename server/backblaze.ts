@@ -41,6 +41,30 @@ class BackblazeService {
     }
   }
 
+  async getUploadUrlForBrowser(): Promise<{ uploadUrl: string; authToken: string; bucketId: string }> {
+    await this.ensureAuthorized();
+
+    try {
+      const uploadUrlResponse = await this.b2.getUploadUrl({
+        bucketId: this.config.bucketId,
+      });
+
+      return {
+        uploadUrl: uploadUrlResponse.data.uploadUrl,
+        authToken: uploadUrlResponse.data.authorizationToken,
+        bucketId: this.config.bucketId,
+      };
+    } catch (error: any) {
+      if (error?.response?.status === 401 || error?.message?.includes('unauthorized')) {
+        this.authorizationToken = null;
+        await this.ensureAuthorized();
+        return this.getUploadUrlForBrowser();
+      }
+      console.error('Backblaze get upload URL error:', error);
+      throw new Error('Failed to get upload URL from Backblaze');
+    }
+  }
+
   async uploadFile(
     fileBuffer: Buffer,
     fileName: string,
