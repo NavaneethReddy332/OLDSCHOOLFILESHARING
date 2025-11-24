@@ -151,7 +151,7 @@ export default function Download() {
       {status === 'input' && (
          <center>
            <p>Please enter the 6-digit code to retrieve your file.</p>
-           <form onSubmit={handleManualSubmit} className="bg-gray-200 p-8 border-2 border-white shadow-md inline-block">
+           <form onSubmit={handleManualSubmit} className="bg-gray-200 dark:bg-gray-800 p-8 border-2 border-gray-300 dark:border-gray-600 shadow-md inline-block">
              Code: <input 
                type="text" 
                value={inputCode}
@@ -170,15 +170,15 @@ export default function Download() {
       {status === 'searching' && (
         <center>
           <p>Connecting to server...</p>
-          <div className="w-64 h-4 border-2 border-gray-500 bg-white p-0.5 relative">
-             <div className="h-full bg-blue-700 animate-[width_2s_ease-in-out_infinite]" style={{width: '50%'}}></div>
+          <div className="w-64 h-4 border-2 border-gray-500 dark:border-gray-400 bg-white dark:bg-gray-800 p-0.5 relative">
+             <div className="h-full bg-blue-700 dark:bg-blue-500 animate-[width_2s_ease-in-out_infinite]" style={{width: '50%'}}></div>
           </div>
           <p><small>Please wait...</small></p>
         </center>
       )}
 
       {status === 'found' && fileInfo && (
-        <div className="border-2 border-blue-800 p-4 bg-[#eeeeff]" data-testid="file-info">
+        <div className="border-2 border-blue-800 dark:border-blue-400 p-4 bg-[#eeeeff] dark:bg-blue-950/30" data-testid="file-info">
           <table width="100%">
             <tbody>
               <tr>
@@ -194,7 +194,7 @@ export default function Download() {
                     <><img src="https://win98icons.alexmeub.com/icons/png/lock_key-0.png" width="16" className="inline" alt="Protected" /> Password Protected<br /></>
                   )}
                   {fileInfo.isOneTime === 1 && (
-                    <><b className="text-red-600">⚠ One-time download only</b><br /></>
+                    <><b className="text-red-600 dark:text-red-400">⚠ One-time download only</b><br /></>
                   )}
                   Downloads: <span data-testid="text-download-count">{fileInfo.downloadCount}</span>
                   {fileInfo.maxDownloads && (
@@ -208,7 +208,7 @@ export default function Download() {
           <br />
           
           {showPasswordInput && (
-            <div className="mb-4 bg-yellow-100 border-2 border-yellow-600 p-3">
+            <div className="mb-4 bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-600 dark:border-yellow-500 p-3">
               <label className="block mb-2 font-bold">Enter Password:</label>
               <input 
                 type="password" 
@@ -234,7 +234,7 @@ export default function Download() {
       {status === 'error' && (
         <center>
           <img src="https://win98icons.alexmeub.com/icons/png/msg_warning-0.png" alt="Error" />
-          <h3 className="text-red-600 mt-4">Error 404: File Not Found</h3>
+          <h3 className="text-red-600 dark:text-red-400 mt-4">Error 404: File Not Found</h3>
           <p>The file you are looking for has expired or does not exist.</p>
           <br />
           <button onClick={() => setLocation("/")} className="retro-button" data-testid="button-back-home">Back to Home</button>

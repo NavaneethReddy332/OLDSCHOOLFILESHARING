@@ -159,6 +159,17 @@
     font-family: 'Courier New', monospace;
     color: var(--text-primary);
   }
+  
+  .retro-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
+  
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
 
   /* Marquee Animation */
   .marquee-container {

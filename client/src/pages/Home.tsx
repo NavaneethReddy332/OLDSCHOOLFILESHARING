@@ -118,7 +118,7 @@ export default function Home() {
     <RetroLayout>
       <div className="text-center mb-6">
         <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-          <span className="text-red-600">Upload Files Now!</span>
+          <span className="text-red-600 dark:text-red-400">Upload Files Now!</span>
         </h2>
         <p className="text-sm sm:text-base">Share files with your friends easily. No registration required.</p>
       </div>

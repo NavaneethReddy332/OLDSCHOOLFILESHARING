@@ -152,7 +152,7 @@ export default function Guestbook() {
               required
               data-testid="textarea-message"
             />
-            <small className="text-gray-600">{message.length}/500 characters</small>
+            <small className="text-gray-600 dark:text-gray-400">{message.length}/500 characters</small>
           </div>
 
           <button 
@@ -166,23 +166,23 @@ export default function Guestbook() {
         </form>
       </div>
 
-      <hr className="border-gray-400 my-6" />
+      <hr className="border-gray-400 dark:border-gray-600 my-6" />
 
       {/* Guestbook Entries */}
       <div>
-        <h3 className="font-bold text-lg mb-4 text-[#000080]">Recent Entries</h3>
+        <h3 className="font-bold text-lg mb-4 text-blue-800 dark:text-blue-400">Recent Entries</h3>
         
         {isLoading && (
           <center>
             <p>Loading guestbook entries...</p>
-            <div className="w-64 h-4 border-2 border-gray-500 bg-white p-0.5 relative mt-2">
-              <div className="h-full bg-blue-700 animate-[width_2s_ease-in-out_infinite]" style={{width: '50%'}}></div>
+            <div className="w-64 h-4 border-2 border-gray-500 dark:border-gray-400 bg-white dark:bg-gray-800 p-0.5 relative mt-2">
+              <div className="h-full bg-blue-700 dark:bg-blue-500 animate-[width_2s_ease-in-out_infinite]" style={{width: '50%'}}></div>
             </div>
           </center>
         )}
 
         {!isLoading && entries && entries.length === 0 && (
-          <div className="bg-yellow-100 border-2 border-yellow-600 p-4 text-center">
+          <div className="bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-600 dark:border-yellow-500 p-4 text-center">
             <p>No entries yet. Be the first to sign our guestbook!</p>
           </div>
         )}
@@ -192,27 +192,27 @@ export default function Guestbook() {
             {entries.map((entry) => (
               <div 
                 key={entry.id} 
-                className="bg-white border-2 border-gray-400 p-4"
+                className="bg-white dark:bg-gray-800 border-2 border-gray-400 dark:border-gray-600 p-4"
                 data-testid={`entry-${entry.id}`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                   <div>
-                    <span className="font-bold text-blue-700" data-testid={`name-${entry.id}`}>
+                    <span className="font-bold text-blue-700 dark:text-blue-400" data-testid={`name-${entry.id}`}>
                       {entry.displayName}
                     </span>
                     {entry.location && (
-                      <span className="text-sm text-gray-600 ml-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
                         from {entry.location}
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-gray-600">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
                     {formatDate(entry.createdAt)}
                   </span>
                 </div>
                 
                 {entry.favoriteSystem && (
-                  <div className="text-sm text-gray-700 mb-2">
+                  <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">
                     <img 
                       src="https://win98icons.alexmeub.com/icons/png/computer_explorer-3.png" 
                       width="16" 
@@ -223,7 +223,7 @@ export default function Guestbook() {
                   </div>
                 )}
                 
-                <div className="bg-[#f5f5f5] border border-gray-300 p-3 rounded" data-testid={`message-${entry.id}`}>
+                <div className="bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 p-3 rounded" data-testid={`message-${entry.id}`}>
                   {entry.message}
                 </div>
               </div>

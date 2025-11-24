@@ -18,14 +18,14 @@ export default function UploadResult() {
   return (
     <RetroLayout>
       <center>
-        <h1><span style={{ color: "green" }}>SUCCESS!</span></h1>
+        <h1><span className="text-green-600 dark:text-green-400">SUCCESS!</span></h1>
         <video 
           src={successVideo} 
           autoPlay 
           loop 
           muted 
           playsInline
-          className="border-2 border-black"
+          className="border-2 border-gray-800 dark:border-gray-200"
           width="300"
         />
         <br /><br />
@@ -34,9 +34,9 @@ export default function UploadResult() {
       
       <br />
       
-      <div className="border-2 border-black p-4 bg-yellow-100 text-center">
+      <div className="border-2 border-gray-800 dark:border-gray-200 p-4 bg-yellow-100 dark:bg-yellow-900/30 text-center">
         <p><b>YOUR SECRET CODE:</b></p>
-        <h2 className="text-4xl font-mono tracking-widest bg-white border border-black inline-block p-2 my-2">{code}</h2>
+        <h2 className="text-4xl font-mono tracking-widest bg-white dark:bg-gray-800 border border-gray-800 dark:border-gray-200 text-black dark:text-white inline-block p-2 my-2">{code}</h2>
         <p className="text-sm">Give this code to your friend.</p>
       </div>
       
@@ -44,7 +44,7 @@ export default function UploadResult() {
       
       <p style={{ textAlign: "center" }}>
         <b>Direct Link:</b><br />
-        <a href={`/download/${code}`} className="text-blue-600 underline">
+        <a href={`/download/${code}`} className="text-blue-600 dark:text-blue-400 underline">
           http://www.retrosend.com/download/{code}
         </a>
       </p>

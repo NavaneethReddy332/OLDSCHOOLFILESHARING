@@ -7,16 +7,16 @@ export default function ErrorPage() {
   return (
     <RetroLayout>
       <center>
-        <h1><span style={{ color: "red" }}>ERROR!</span></h1>
+        <h1><span className="text-red-600 dark:text-red-400">ERROR!</span></h1>
         <img src="https://win98icons.alexmeub.com/icons/png/msg_error-0.png" alt="Critical Error" width="64" />
         <br /><br />
-        <h2 className="text-xl bg-blue-900 text-white p-2 inline-block font-mono">FATAL EXCEPTION</h2>
+        <h2 className="text-xl bg-blue-900 dark:bg-blue-800 text-white p-2 inline-block font-mono">FATAL EXCEPTION</h2>
       </center>
       
       <br />
       
-      <div className="border-2 border-red-800 p-4 bg-red-100">
-        <p className="font-mono text-red-900 font-bold mb-4">
+      <div className="border-2 border-red-800 dark:border-red-500 p-4 bg-red-100 dark:bg-red-950/30">
+        <p className="font-mono text-red-900 dark:text-red-300 font-bold mb-4">
           A fatal exception 0E has occurred at 0028:C0034B23 in VXD VMM(01) + 000034B23. 
           The current application will be terminated.
         </p>
@@ -30,14 +30,14 @@ export default function ErrorPage() {
       <br />
       
       <center>
-        <button onClick={() => setLocation("/")} className="retro-button text-red-600 font-bold">
+        <button onClick={() => setLocation("/")} className="retro-button text-red-600 dark:text-red-400 font-bold">
            &lt;&lt; RETURN TO SAFETY
         </button>
       </center>
 
       <br/>
       
-      <div className="text-xs font-mono border-t border-gray-400 pt-2 text-gray-500">
+      <div className="text-xs font-mono border-t border-gray-400 dark:border-gray-600 pt-2 text-gray-500 dark:text-gray-400">
         Debug Info: STACK_OVERFLOW / NULL_POINTER_EXCEPTION / FILE_CORRUPTED
       </div>
     </RetroLayout>
