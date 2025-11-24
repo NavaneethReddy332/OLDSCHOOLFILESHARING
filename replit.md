@@ -40,9 +40,12 @@ Preferred communication style: Simple, everyday language.
 
 **File Upload & Storage**
 - Multer middleware for handling multipart/form-data file uploads
-- Local file system storage in `/uploads` directory with unique filename generation
+- **Backblaze B2 cloud storage** for production file storage (replaced local file system)
+- Backblaze service module (server/backblaze.ts) handles upload, download, and delete operations
+- Automatic token reauthorization with retry logic for long-lived processes
 - 50MB file size limit enforced at the middleware level
 - Random 6-digit code generation for file identification
+- Orphaned file prevention: B2 files deleted before database records
 
 **Data Layer**
 - In-memory storage implementation (MemStorage) for development/testing
@@ -62,6 +65,7 @@ Preferred communication style: Simple, everyday language.
 - Unique 6-digit codes for file retrieval
 - Original filename preservation alongside system-generated unique filenames
 - File metadata: size, MIME type
+- **b2FileId field** for tracking cloud storage files in Backblaze B2
 - Timestamp tracking: uploadedAt, expiresAt (24-hour expiration window)
 - UUID primary keys with PostgreSQL's gen_random_uuid()
 
@@ -107,6 +111,12 @@ Preferred communication style: Simple, everyday language.
 - Neon Serverless PostgreSQL (@neondatabase/serverless) - Cloud PostgreSQL database with connection pooling
 - Configured via DATABASE_URL environment variable
 
+**Cloud Storage**
+- Backblaze B2 (backblaze-b2) - Cloud object storage for file uploads
+- Configured via B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET_ID, and B2_BUCKET_NAME secrets
+- Automatic token reauthorization and retry logic for production reliability
+- Orphaned file prevention through coordinated deletion
+
 **Replit Platform Integration**
 - @replit/vite-plugin-runtime-error-modal - Development error overlay
 - @replit/vite-plugin-cartographer - Code navigation features
@@ -123,6 +133,7 @@ Preferred communication style: Simple, everyday language.
 
 **File Handling**
 - multer - Multipart form data and file upload handling
+- backblaze-b2 - Cloud storage SDK for Backblaze B2
 
 **UI Components**
 - @radix-ui/* - Accessible component primitives (30+ packages)
