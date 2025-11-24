@@ -10,7 +10,7 @@ import { insertGuestbookEntrySchema } from "@shared/schema";
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 50 * 1024 * 1024,
+    fileSize: 1024 * 1024 * 1024,
   },
 });
 
