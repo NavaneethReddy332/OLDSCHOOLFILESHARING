@@ -20,8 +20,12 @@ function generateCode(): string {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/upload", upload.single("file"), async (req, res) => {
+    const startTime = Date.now();
     try {
+      console.log(`[UPLOAD] Starting upload - File: ${req.file?.originalname || 'unknown'}, Size: ${req.file?.size || 0} bytes`);
+      
       if (!req.file) {
+        console.error('[UPLOAD] No file in request');
         return res.status(400).json({ error: "No file uploaded" });
       }
 
@@ -32,6 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         code = generateCode();
         existingFile = await storage.getFileByCode(code);
       }
+      console.log(`[UPLOAD] Generated unique code: ${code}`);
 
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
@@ -44,16 +49,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (password && password.trim() !== "") {
         passwordHash = await bcrypt.hash(password, 10);
         isPasswordProtected = 1;
+        console.log('[UPLOAD] Password protection enabled');
       }
 
       const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${req.file.originalname}`;
       
+      console.log(`[UPLOAD] Uploading to Backblaze: ${uniqueFileName}`);
       const b2Upload = await backblazeService.uploadFile(
         req.file.buffer,
         uniqueFileName,
         req.file.mimetype
       );
+      console.log(`[UPLOAD] Backblaze upload complete: ${b2Upload.fileId}`);
 
+      console.log('[UPLOAD] Creating database record');
       const file = await storage.createFile({
         code,
         filename: uniqueFileName,
@@ -68,6 +77,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         b2FileId: b2Upload.fileId,
       });
 
+      const duration = Date.now() - startTime;
+      console.log(`[UPLOAD] Success! Code: ${file.code}, Duration: ${duration}ms`);
+
       res.json({
         code: file.code,
         originalName: file.originalName,
@@ -77,9 +89,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxDownloads: file.maxDownloads,
         isOneTime: file.isOneTime,
       });
-    } catch (error) {
-      console.error("Upload error:", error);
-      res.status(500).json({ error: "Upload failed" });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      console.error(`[UPLOAD] Failed after ${duration}ms:`, error);
+      console.error('[UPLOAD] Error stack:', error.stack);
+      
+      const errorMessage = error.message || "Upload failed";
+      res.status(500).json({ 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   });
 
@@ -230,6 +249,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  httpServer.timeout = 600000;
+  httpServer.keepAliveTimeout = 610000;
+  httpServer.headersTimeout = 620000;
 
   return httpServer;
 }
