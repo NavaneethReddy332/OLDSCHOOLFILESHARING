@@ -76,6 +76,48 @@ class BackblazeService {
     }
   }
 
+  async uploadFileStream(
+    fileStream: NodeJS.ReadableStream,
+    fileName: string,
+    contentType: string,
+    fileSize: number
+  ): Promise<{ fileId: string; fileName: string }> {
+    await this.ensureAuthorized();
+
+    try {
+      const uploadUrlResponse = await this.b2.getUploadUrl({
+        bucketId: this.config.bucketId,
+      });
+
+      const uploadParams: any = {
+        uploadUrl: uploadUrlResponse.data.uploadUrl,
+        uploadAuthToken: uploadUrlResponse.data.authorizationToken,
+        fileName: fileName,
+        data: fileStream,
+        contentType: contentType,
+      };
+      
+      if (fileSize > 0) {
+        uploadParams.contentLength = fileSize;
+      }
+
+      const uploadResponse = await this.b2.uploadFile(uploadParams);
+
+      return {
+        fileId: uploadResponse.data.fileId,
+        fileName: uploadResponse.data.fileName,
+      };
+    } catch (error: any) {
+      if (error?.response?.status === 401 || error?.message?.includes('unauthorized')) {
+        this.authorizationToken = null;
+        await this.ensureAuthorized();
+        return this.uploadFileStream(fileStream, fileName, contentType, fileSize);
+      }
+      console.error('Backblaze upload stream error:', error);
+      throw new Error('Failed to upload file stream to Backblaze');
+    }
+  }
+
   async downloadFile(fileName: string): Promise<Buffer> {
     await this.ensureAuthorized();
 

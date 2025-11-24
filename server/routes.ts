@@ -6,6 +6,8 @@ import multer from "multer";
 import { randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import { insertGuestbookEntrySchema } from "@shared/schema";
+import Busboy from "busboy";
+import { PassThrough } from "stream";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -19,87 +21,140 @@ function generateCode(): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  app.post("/api/upload", upload.single("file"), async (req, res) => {
+  app.post("/api/upload", async (req, res) => {
     const startTime = Date.now();
-    try {
-      console.log(`[UPLOAD] Starting upload - File: ${req.file?.originalname || 'unknown'}, Size: ${req.file?.size || 0} bytes`);
-      
-      if (!req.file) {
-        console.error('[UPLOAD] No file in request');
-        return res.status(400).json({ error: "No file uploaded" });
+    const busboy = Busboy({ 
+      headers: req.headers,
+      limits: {
+        fileSize: 1024 * 1024 * 1024,
       }
+    });
+    
+    let uploadComplete = false;
+    const formFields: Record<string, string> = {};
+    
+    busboy.on('field', (fieldname, value) => {
+      formFields[fieldname] = value;
+      console.log(`[UPLOAD] Received field: ${fieldname}`);
+    });
+    
+    busboy.on('file', async (fieldname, fileStream, info) => {
+      const receiveStartTime = Date.now();
+      try {
+        const { filename, encoding, mimeType } = info;
+        console.log(`[UPLOAD] File stream started - File: ${filename}, Type: ${mimeType}`);
+        
+        let code = generateCode();
+        let existingFile = await storage.getFileByCode(code);
+        
+        while (existingFile) {
+          code = generateCode();
+          existingFile = await storage.getFileByCode(code);
+        }
+        console.log(`[UPLOAD] Generated unique code: ${code}`);
 
-      let code = generateCode();
-      let existingFile = await storage.getFileByCode(code);
-      
-      while (existingFile) {
-        code = generateCode();
-        existingFile = await storage.getFileByCode(code);
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${filename}`;
+        
+        let uploadedSize = 0;
+        const chunks: Buffer[] = [];
+        
+        fileStream.on('data', (chunk: Buffer) => {
+          uploadedSize += chunk.length;
+          chunks.push(chunk);
+        });
+
+        await new Promise<void>((resolve, reject) => {
+          fileStream.on('end', () => {
+            const receiveEndTime = Date.now();
+            console.log(`[UPLOAD] File stream complete - Size: ${uploadedSize} bytes, Receive time: ${receiveEndTime - receiveStartTime}ms`);
+            resolve();
+          });
+          fileStream.on('error', reject);
+        });
+        
+        const b2UploadStart = Date.now();
+        console.log(`[UPLOAD] Starting upload to Backblaze: ${uniqueFileName}, Size: ${uploadedSize}`);
+        
+        const fileBuffer = Buffer.concat(chunks);
+        const uploadStream = new PassThrough();
+        uploadStream.end(fileBuffer);
+        
+        const b2Upload = await backblazeService.uploadFileStream(
+          uploadStream,
+          uniqueFileName,
+          mimeType,
+          uploadedSize
+        );
+        
+        const b2Duration = Date.now() - b2UploadStart;
+        const totalDuration = Date.now() - startTime;
+        console.log(`[UPLOAD] Backblaze upload complete in ${b2Duration}ms, Total: ${totalDuration}ms: ${b2Upload.fileId}`);
+
+        const { password, maxDownloads, isOneTime } = formFields;
+        
+        let passwordHash = null;
+        let isPasswordProtected = 0;
+        
+        if (password && password.trim() !== "") {
+          passwordHash = await bcrypt.hash(password, 10);
+          isPasswordProtected = 1;
+          console.log('[UPLOAD] Password protection enabled');
+        }
+
+        console.log('[UPLOAD] Creating database record');
+        const dbFile = await storage.createFile({
+          code,
+          filename: uniqueFileName,
+          originalName: filename,
+          size: uploadedSize,
+          mimetype: mimeType,
+          expiresAt,
+          passwordHash,
+          isPasswordProtected,
+          maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+          isOneTime: isOneTime === 'true' || isOneTime === true ? 1 : 0,
+          b2FileId: b2Upload.fileId,
+        });
+
+        const finalDuration = Date.now() - startTime;
+        console.log(`[UPLOAD] Success! Code: ${dbFile.code}, Total Duration: ${finalDuration}ms (Receive: ${fileStream ? 'async' : 'N/A'}, B2: ${b2Duration}ms)`);
+
+        uploadComplete = true;
+        res.json({
+          code: dbFile.code,
+          originalName: dbFile.originalName,
+          size: dbFile.size,
+          expiresAt: dbFile.expiresAt,
+          isPasswordProtected: dbFile.isPasswordProtected,
+          maxDownloads: dbFile.maxDownloads,
+          isOneTime: dbFile.isOneTime,
+        });
+      } catch (error: any) {
+        if (!uploadComplete) {
+          const duration = Date.now() - startTime;
+          console.error(`[UPLOAD] Failed after ${duration}ms:`, error);
+          console.error('[UPLOAD] Error stack:', error.stack);
+          
+          const errorMessage = error.message || "Upload failed";
+          res.status(500).json({ 
+            error: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+          });
+        }
       }
-      console.log(`[UPLOAD] Generated unique code: ${code}`);
+    });
 
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24);
-
-      const { password, maxDownloads, isOneTime } = req.body;
-      
-      let passwordHash = null;
-      let isPasswordProtected = 0;
-      
-      if (password && password.trim() !== "") {
-        passwordHash = await bcrypt.hash(password, 10);
-        isPasswordProtected = 1;
-        console.log('[UPLOAD] Password protection enabled');
+    busboy.on('error', (error: any) => {
+      console.error('[UPLOAD] Busboy error:', error);
+      if (!uploadComplete) {
+        res.status(500).json({ error: "Upload stream error" });
       }
+    });
 
-      const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${req.file.originalname}`;
-      
-      console.log(`[UPLOAD] Uploading to Backblaze: ${uniqueFileName}`);
-      const b2Upload = await backblazeService.uploadFile(
-        req.file.buffer,
-        uniqueFileName,
-        req.file.mimetype
-      );
-      console.log(`[UPLOAD] Backblaze upload complete: ${b2Upload.fileId}`);
-
-      console.log('[UPLOAD] Creating database record');
-      const file = await storage.createFile({
-        code,
-        filename: uniqueFileName,
-        originalName: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
-        expiresAt,
-        passwordHash,
-        isPasswordProtected,
-        maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
-        isOneTime: isOneTime === 'true' || isOneTime === true ? 1 : 0,
-        b2FileId: b2Upload.fileId,
-      });
-
-      const duration = Date.now() - startTime;
-      console.log(`[UPLOAD] Success! Code: ${file.code}, Duration: ${duration}ms`);
-
-      res.json({
-        code: file.code,
-        originalName: file.originalName,
-        size: file.size,
-        expiresAt: file.expiresAt,
-        isPasswordProtected: file.isPasswordProtected,
-        maxDownloads: file.maxDownloads,
-        isOneTime: file.isOneTime,
-      });
-    } catch (error: any) {
-      const duration = Date.now() - startTime;
-      console.error(`[UPLOAD] Failed after ${duration}ms:`, error);
-      console.error('[UPLOAD] Error stack:', error.stack);
-      
-      const errorMessage = error.message || "Upload failed";
-      res.status(500).json({ 
-        error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
-    }
+    req.pipe(busboy);
   });
 
   app.get("/api/file/:code", async (req, res) => {
