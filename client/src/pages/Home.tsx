@@ -1,8 +1,7 @@
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { RetroLayout } from "../components/RetroLayout";
 import { useTerminal } from "../context/TerminalContext";
-import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 
@@ -12,45 +11,10 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [maxDownloads, setMaxDownloads] = useState("");
   const [isOneTime, setIsOneTime] = useState(false);
-  const { addLog } = useTerminal();
+  const [isUploading, setIsUploading] = useState(false);
+  const { addLog, updateLastLog } = useTerminal();
   const { toast } = useToast();
-
-  const uploadMutation = useMutation({
-    mutationFn: async (fileData: { file: File; password: string; maxDownloads: string; isOneTime: boolean }) => {
-      const formData = new FormData();
-      formData.append("file", fileData.file);
-      if (fileData.password) formData.append("password", fileData.password);
-      if (fileData.maxDownloads) formData.append("maxDownloads", fileData.maxDownloads);
-      formData.append("isOneTime", fileData.isOneTime.toString());
-      
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
-
-      return response.json();
-    },
-    onSuccess: (data) => {
-      addLog(`UPLOAD_COMPLETE: 100%`);
-      addLog(`GENERATING_HASH... OK`);
-      addLog(`SECURE_CODE: ${data.code}`);
-      setTimeout(() => {
-        setLocation(`/result/${data.code}`);
-      }, 400);
-    },
-    onError: (error) => {
-      addLog(`ERROR: UPLOAD_FAILED - ${error.message}`, 'error');
-      toast({
-        title: "Upload Failed",
-        description: error.message || "An error occurred while uploading your file. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const lastProgressRef = useRef<number>(0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -62,37 +26,94 @@ export default function Home() {
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file || isUploading) return;
+    
+    setIsUploading(true);
+    lastProgressRef.current = 0;
     
     addLog(`INITIATING_UPLOAD: ${file.name}...`);
-    addLog(`FILE_SIZE: ${(file.size / 1024).toFixed(2)} KB`);
+    addLog(`FILE_SIZE: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+    addLog(`ESTABLISHING_CONNECTION...`);
     
-    // Simulate upload progress smoothly
-    const simulateProgress = async () => {
-      const steps = [
-        { msg: 'ESTABLISHING_CONNECTION...', delay: 50 },
-        { msg: 'CONNECTION_ESTABLISHED', delay: 80 },
-        { msg: 'ALLOCATING_BUFFER...', delay: 60 },
-        { msg: 'ENCODING_DATA...', delay: 70 },
-        { msg: 'TRANSFER: █░░░░░░░░░ 10%', delay: 100 },
-        { msg: 'TRANSFER: ███░░░░░░░ 30%', delay: 120 },
-        { msg: 'TRANSFER: █████░░░░░ 50%', delay: 100 },
-        { msg: 'TRANSFER: ███████░░░ 70%', delay: 120 },
-        { msg: 'TRANSFER: █████████░ 90%', delay: 100 },
-      ];
-      
-      for (const step of steps) {
-        await new Promise(resolve => setTimeout(resolve, step.delay));
-        addLog(step.msg);
-      }
-      
-      if (password) addLog(`ENCRYPTING...`);
-      if (maxDownloads) addLog(`LIMIT: ${maxDownloads}`);
-      if (isOneTime) addLog(`ONE_TIME_MODE`);
-    };
-    
-    simulateProgress();
-    uploadMutation.mutate({ file, password, maxDownloads, isOneTime });
+    const formData = new FormData();
+    formData.append("file", file);
+    if (password) formData.append("password", password);
+    if (maxDownloads) formData.append("maxDownloads", maxDownloads);
+    formData.append("isOneTime", isOneTime.toString());
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          
+          if (percentComplete !== lastProgressRef.current) {
+            lastProgressRef.current = percentComplete;
+            const dots = '.'.repeat(Math.floor(percentComplete / 10));
+            const spaces = '/'.repeat(10 - Math.floor(percentComplete / 10));
+            updateLastLog(`UPLOADING  ${percentComplete}%  ${dots}${spaces}`);
+          }
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            addLog(`UPLOAD_COMPLETE: 100%`);
+            addLog(`GENERATING_HASH... OK`);
+            if (password) addLog(`ENCRYPTING...`);
+            if (maxDownloads) addLog(`LIMIT: ${maxDownloads}`);
+            if (isOneTime) addLog(`ONE_TIME_MODE`);
+            addLog(`SECURE_CODE: ${data.code}`);
+            setIsUploading(false);
+            setTimeout(() => {
+              setLocation(`/result/${data.code}`);
+            }, 400);
+            resolve(data);
+          } catch (error) {
+            addLog(`ERROR: INVALID_RESPONSE`, 'error');
+            setIsUploading(false);
+            toast({
+              title: "Upload Failed",
+              description: "Invalid server response",
+              variant: "destructive",
+            });
+            reject(error);
+          }
+        } else {
+          addLog(`ERROR: UPLOAD_FAILED - Server returned ${xhr.status}`, 'error');
+          setIsUploading(false);
+          toast({
+            title: "Upload Failed",
+            description: `Server error: ${xhr.status}`,
+            variant: "destructive",
+          });
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        addLog(`ERROR: NETWORK_ERROR`, 'error');
+        setIsUploading(false);
+        toast({
+          title: "Upload Failed",
+          description: "Network error occurred",
+          variant: "destructive",
+        });
+        reject(new Error('Network error'));
+      });
+
+      xhr.addEventListener('abort', () => {
+        addLog(`ERROR: UPLOAD_CANCELLED`, 'error');
+        setIsUploading(false);
+        reject(new Error('Upload cancelled'));
+      });
+
+      xhr.open('POST', '/api/upload');
+      xhr.send(formData);
+    });
   };
 
   const [downloadCode, setDownloadCode] = useState("");
@@ -111,8 +132,6 @@ export default function Home() {
       });
     }
   };
-
-  const isUploading = uploadMutation.isPending;
 
   return (
     <RetroLayout>

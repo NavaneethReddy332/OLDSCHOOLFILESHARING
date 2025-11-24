@@ -13,6 +13,7 @@ interface LogEntry {
 interface TerminalContextType {
   logs: LogEntry[];
   addLog: (message: string, type?: LogType) => void;
+  updateLastLog: (message: string) => void;
   clearLogs: () => void;
 }
 
@@ -68,12 +69,26 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const updateLastLog = useCallback((message: string) => {
+    setLogs((prev) => {
+      if (prev.length === 0) return prev;
+      
+      const updated = [...prev];
+      updated[updated.length - 1] = {
+        ...updated[updated.length - 1],
+        message,
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      return updated;
+    });
+  }, []);
+
   const clearLogs = useCallback(() => {
     setLogs([]);
   }, []);
 
   return (
-    <TerminalContext.Provider value={{ logs, addLog, clearLogs }}>
+    <TerminalContext.Provider value={{ logs, addLog, updateLastLog, clearLogs }}>
       {children}
     </TerminalContext.Provider>
   );
