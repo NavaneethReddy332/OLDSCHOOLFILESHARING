@@ -122,11 +122,34 @@ Original `/api/upload` endpoint remains available as fallback if:
 - [ ] Error handling for each step
 - [ ] Large file (100MB+) upload completes successfully
 
-## Known Limitations
+## Known Limitations & Behaviors
+
+### Server Restart Behavior
+**IMPORTANT**: Pending upload sessions are stored in-memory and are lost on server restart.
+
+**What happens if server restarts during upload:**
+1. User's browser upload to B2 may complete successfully
+2. Pending upload session is lost from server memory
+3. Finalization will fail with "Invalid upload session" error
+4. File exists in B2 but has no database record (orphaned)
+
+**User impact**: Users must restart their upload if server restarts mid-upload.
+
+**Why in-memory is acceptable:**
+- B2 upload URLs are short-lived (expire after 24 hours or on use)
+- Server restart invalidates the B2 upload URLs anyway
+- Users would need to restart regardless
+- Simpler implementation with automatic cleanup
+
+**Monitoring**: Track "Invalid upload session" errors to detect server restarts affecting uploads.
+
+### Other Limitations
 1. **CORS dependency**: Requires B2 bucket CORS configuration
 2. **No integrity verification**: Using `do_not_verify` for SHA1
 3. **Orphaned files**: If finalization fails, file exists in B2 without DB record
    - Future: Add cleanup job to remove orphaned files
+4. **No B2 file verification**: Finalize trusts the fileId without verifying it exists in B2
+   - Future: Call `backblazeService.getFileInfo(fileId)` before creating DB record
 
 ## Deployment Notes
 
