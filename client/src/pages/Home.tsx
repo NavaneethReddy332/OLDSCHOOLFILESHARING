@@ -57,6 +57,10 @@ export default function Home() {
               const dots = '.'.repeat(Math.floor(percentComplete / 10));
               const spaces = '/'.repeat(10 - Math.floor(percentComplete / 10));
               updateLastLog(`STREAMING_TO_SERVER  ${percentComplete}%  ${dots}${spaces}`);
+              
+              if (percentComplete === 100) {
+                addLog(`UPLOADING_TO_CLOUD...`);
+              }
             }
           }
         });
@@ -65,7 +69,7 @@ export default function Home() {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const response = JSON.parse(xhr.responseText);
-              addLog(`UPLOAD_COMPLETE: 100%`);
+              updateLastLog(`UPLOAD_COMPLETE: 100%`);
               console.log('Upload successful, response:', response);
               resolve(response);
             } catch (error) {

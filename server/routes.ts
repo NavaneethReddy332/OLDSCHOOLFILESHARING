@@ -26,14 +26,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     busboy.on('field', (fieldname, value) => {
       formFields[fieldname] = value;
-      console.log(`[UPLOAD] Received field: ${fieldname}=${value}`);
     });
     
     busboy.on('file', async (fieldname, fileStream, info) => {
-      const receiveStartTime = Date.now();
       try {
         const { filename, encoding, mimeType } = info;
-        console.log(`[UPLOAD] File stream started - File: ${filename}, Type: ${mimeType}`);
         
         let code = generateCode();
         let existingFile = await storage.getFileByCode(code);
@@ -42,7 +39,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           code = generateCode();
           existingFile = await storage.getFileByCode(code);
         }
-        console.log(`[UPLOAD] Generated unique code: ${code}`);
 
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 24);
@@ -60,14 +56,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         fileStream.on('limit', () => {
           fileTruncated = true;
-          console.error(`[UPLOAD] File size limit exceeded for ${filename}`);
+          console.error(`[UPLOAD] File size limit exceeded: ${filename}`);
         });
 
         await new Promise<void>((resolve, reject) => {
           fileStream.on('end', () => {
-            const receiveEndTime = Date.now();
-            console.log(`[UPLOAD] Received from client - Size: ${uploadedSize} bytes, Time: ${receiveEndTime - receiveStartTime}ms`);
-            
             if (fileTruncated || (fileStream as any).truncated) {
               reject(new Error('File size exceeds 1GB limit'));
             } else {
@@ -77,18 +70,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileStream.on('error', reject);
         });
         
-        const b2UploadStart = Date.now();
-        console.log(`[UPLOAD] Uploading to Backblaze: ${uniqueFileName}, Size: ${uploadedSize} bytes`);
-        
         const fileBuffer = Buffer.concat(chunks);
         const b2Upload = await backblazeService.uploadFile(
           fileBuffer,
           uniqueFileName,
           mimeType || 'application/octet-stream'
         );
-        
-        const b2Duration = Date.now() - b2UploadStart;
-        console.log(`[UPLOAD] Backblaze upload complete in ${b2Duration}ms: ${b2Upload.fileId}`);
 
         const { password, maxDownloads, isOneTime } = formFields;
         
@@ -96,13 +83,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let isPasswordProtected = 0;
         
         if (password && password.trim() !== "") {
-          const hashStart = Date.now();
           passwordHash = await bcrypt.hash(password, 10);
           isPasswordProtected = 1;
-          console.log(`[UPLOAD] Password hashed in ${Date.now() - hashStart}ms`);
         }
 
-        const dbStart = Date.now();
         const dbFile = await storage.createFile({
           code,
           filename: uniqueFileName,
@@ -116,10 +100,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isOneTime: isOneTime === 'true' ? 1 : 0,
           b2FileId: b2Upload.fileId,
         });
-        console.log(`[UPLOAD] Database record created in ${Date.now() - dbStart}ms`);
-
-        const totalDuration = Date.now() - startTime;
-        console.log(`[UPLOAD] ✓ SUCCESS! Code: ${dbFile.code}, Total: ${totalDuration}ms (B2: ${b2Duration}ms)`);
 
         uploadComplete = true;
         res.json({
@@ -133,9 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (error: any) {
         if (!uploadComplete) {
-          const duration = Date.now() - startTime;
-          console.error(`[UPLOAD] ✗ FAILED after ${duration}ms:`, error);
-          console.error('[UPLOAD] Error stack:', error.stack);
+          console.error(`[UPLOAD] Failed:`, error.message);
           
           const errorMessage = error.message || "Upload failed";
           const statusCode = error.message?.includes('1GB limit') ? 413 : 500;
