@@ -4,6 +4,7 @@ import { useTerminal } from '../context/TerminalContext';
 import { useTheme } from './ThemeProvider';
 import { Moon, Sun } from 'lucide-react';
 import generatedVideo from '@assets/Cinematic_Tech_Startup_Intro_Animation_1764007246565.mp4';
+import backblazeLogoPath from '@assets/backblaze_logo.png';
 
 interface RetroLayoutProps {
   children: React.ReactNode;
@@ -32,13 +33,12 @@ export function RetroLayout({ children }: RetroLayoutProps) {
           
           {/* Backblaze Logo Center */}
           <div className="hidden md:flex items-center justify-center flex-1">
-            <div className="flex items-center gap-2 px-4 py-1 border-2 transition-colors duration-300" style={{ borderColor: 'var(--header-border)', backgroundColor: 'color-mix(in srgb, var(--header-bg) 80%, black)' }}>
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" style={{ color: '#E31937' }}/>
-                <path d="M7 9h10M7 12h10M7 15h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: '#E31937' }}/>
-              </svg>
-              <span className="text-xs font-bold tracking-wider" style={{ color: '#E31937' }}>BACKBLAZE</span>
-            </div>
+            <img 
+              src={backblazeLogoPath}
+              alt="Backblaze"
+              className="h-8 sm:h-10 object-contain max-w-xs"
+              data-testid="img-backblaze-logo"
+            />
           </div>
           
           <div className="flex items-center gap-2 flex-1 justify-end">
