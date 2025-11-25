@@ -26,11 +26,22 @@ export function RetroLayout({ children }: RetroLayoutProps) {
       {/* Header */}
       <header className="mb-4">
         <div className="border-2 p-3 sm:p-4 flex items-center justify-between font-bold shadow-md transition-colors duration-300" style={{ backgroundColor: 'var(--header-bg)', borderColor: 'var(--header-border)' }}>
-          <div className="flex items-center">
+          <div className="flex items-center flex-1">
             <span className="text-lg sm:text-xl font-retro tracking-widest transition-colors duration-300" style={{ color: 'var(--header-text)' }}>RETROSEND_V1.0</span>
           </div>
           
-          <div className="flex items-center gap-2">
+          {/* Backblaze Logo Center */}
+          <div className="hidden md:flex items-center justify-center flex-1">
+            <div className="flex items-center gap-2 px-4 py-1 border-2 transition-colors duration-300" style={{ borderColor: 'var(--header-border)', backgroundColor: 'color-mix(in srgb, var(--header-bg) 80%, black)' }}>
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="2" style={{ color: '#E31937' }}/>
+                <path d="M7 9h10M7 12h10M7 15h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: '#E31937' }}/>
+              </svg>
+              <span className="text-xs font-bold tracking-wider" style={{ color: '#E31937' }}>BACKBLAZE</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 flex-1 justify-end">
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
