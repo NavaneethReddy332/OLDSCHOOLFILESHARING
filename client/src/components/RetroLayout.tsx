@@ -4,7 +4,6 @@ import { useTerminal } from '../context/TerminalContext';
 import { useTheme } from './ThemeProvider';
 import { Moon, Sun } from 'lucide-react';
 import generatedVideo from '@assets/Cinematic_Tech_Startup_Intro_Animation_1764007246565.mp4';
-import backblazeLogoPath from '@assets/backblaze_logo.png';
 
 interface RetroLayoutProps {
   children: React.ReactNode;
@@ -34,7 +33,7 @@ export function RetroLayout({ children }: RetroLayoutProps) {
           {/* Backblaze Logo Center */}
           <div className="hidden md:flex items-center justify-center flex-1">
             <img 
-              src={backblazeLogoPath}
+              src="/backblaze_logo.png"
               alt="Backblaze"
               className="h-8 sm:h-10 object-contain max-w-xs"
               data-testid="img-backblaze-logo"
