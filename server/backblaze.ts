@@ -87,31 +87,18 @@ class BackblazeService {
       });
 
       const totalSize = fileBuffer.length;
-      let uploadedBytes = 0;
+      const startTime = Date.now();
 
       if (progressEmitter) {
         progressEmitter.emit('progress', { type: 'progress', percent: 0 });
       }
 
-      const progressTrackingStream = new Readable({
-        read() {}
-      });
-
-      progressTrackingStream.on('data', (chunk: Buffer) => {
-        uploadedBytes += chunk.length;
-        const percent = Math.min(99, Math.round((uploadedBytes / totalSize) * 100));
+      const progressInterval = setInterval(() => {
+        const currentProgress = Math.min(95, (Date.now() - startTime) / 100);
         if (progressEmitter) {
-          progressEmitter.emit('progress', { type: 'progress', percent });
+          progressEmitter.emit('progress', { type: 'progress', percent: Math.floor(currentProgress) });
         }
-      });
-
-      const chunkSize = 64 * 1024;
-      for (let i = 0; i < fileBuffer.length; i += chunkSize) {
-        const chunk = fileBuffer.slice(i, Math.min(i + chunkSize, fileBuffer.length));
-        progressTrackingStream.push(chunk);
-        await new Promise(resolve => setImmediate(resolve));
-      }
-      progressTrackingStream.push(null);
+      }, 200);
 
       const headers: Record<string, string> = {
         'Authorization': uploadUrlResponse.data.authorizationToken,
@@ -126,6 +113,8 @@ class BackblazeService {
         headers: headers,
         body: fileBuffer,
       });
+
+      clearInterval(progressInterval);
 
       if (!response.ok) {
         const errorText = await response.text();
