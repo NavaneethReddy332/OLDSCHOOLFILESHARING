@@ -17,12 +17,22 @@ export default function Home() {
   const lastProgressRef = useRef<number>(0);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
   const cloudUploadIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const streamingSpinnerRef = useRef<NodeJS.Timeout | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     return () => {
       if (cloudUploadIntervalRef.current) {
         clearInterval(cloudUploadIntervalRef.current);
         cloudUploadIntervalRef.current = null;
+      }
+      if (streamingSpinnerRef.current) {
+        clearInterval(streamingSpinnerRef.current);
+        streamingSpinnerRef.current = null;
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
     };
   }, []);
@@ -45,7 +55,36 @@ export default function Home() {
       
       addLog(`INITIATING_UPLOAD: ${file.name}...`);
       addLog(`FILE_SIZE: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
-      addLog(`STREAMING_TO_SERVER  0%  //////////`);
+      
+      const uploadId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      const eventSource = new EventSource(`/api/upload-progress/${uploadId}`);
+      eventSourceRef.current = eventSource;
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'progress' && data.percent !== undefined) {
+            const spinnerChars = ['|', '/', '-', '\\'];
+            const spinnerIndex = Math.floor(Date.now() / 150) % spinnerChars.length;
+            updateLastLog(`UPLOADING TO BACKBLAZE  ${data.percent}% ${spinnerChars[spinnerIndex]}`);
+          }
+        } catch (error) {
+          console.error('Error parsing SSE message:', error);
+        }
+      };
+      
+      const spinnerChars = ['|', '/', '-', '\\'];
+      let spinnerIndex = 0;
+      addLog(`STREAMING_TO_SERVER  0%  ////////// ${spinnerChars[0]}`);
+      
+      streamingSpinnerRef.current = setInterval(() => {
+        spinnerIndex = (spinnerIndex + 1) % spinnerChars.length;
+        const percentComplete = lastProgressRef.current;
+        const dots = '.'.repeat(Math.floor(percentComplete / 10));
+        const spaces = '/'.repeat(10 - Math.floor(percentComplete / 10));
+        updateLastLog(`STREAMING_TO_SERVER  ${percentComplete}%  ${dots}${spaces} ${spinnerChars[spinnerIndex]}`);
+      }, 150);
 
       const formData = new FormData();
       formData.append('fileSize', file.size.toString());
@@ -64,25 +103,25 @@ export default function Home() {
             
             if (percentComplete !== lastProgressRef.current) {
               lastProgressRef.current = percentComplete;
-              const dots = '.'.repeat(Math.floor(percentComplete / 10));
-              const spaces = '/'.repeat(10 - Math.floor(percentComplete / 10));
-              updateLastLog(`STREAMING_TO_SERVER  ${percentComplete}%  ${dots}${spaces}`);
-              
-              if (percentComplete === 100) {
-                const spinnerChars = ['|', '/', '-', '\\'];
-                let spinnerIndex = 0;
-                addLog(`UPLOADING TO BACKBLAZE ${spinnerChars[0]}`);
-                
-                cloudUploadIntervalRef.current = setInterval(() => {
-                  spinnerIndex = (spinnerIndex + 1) % spinnerChars.length;
-                  updateLastLog(`UPLOADING TO BACKBLAZE ${spinnerChars[spinnerIndex]}`);
-                }, 150);
+            }
+            
+            if (percentComplete === 100) {
+              if (streamingSpinnerRef.current) {
+                clearInterval(streamingSpinnerRef.current);
+                streamingSpinnerRef.current = null;
               }
+              const dots = '.'.repeat(10);
+              updateLastLog(`STREAMING_TO_SERVER  ${percentComplete}%  ${dots}`);
+              addLog(`UPLOADING TO BACKBLAZE  0% /`);
             }
           }
         });
 
         xhr.addEventListener('load', () => {
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+          }
           if (cloudUploadIntervalRef.current) {
             clearInterval(cloudUploadIntervalRef.current);
             cloudUploadIntervalRef.current = null;
@@ -110,6 +149,10 @@ export default function Home() {
         });
 
         xhr.addEventListener('error', (e) => {
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+          }
           if (cloudUploadIntervalRef.current) {
             clearInterval(cloudUploadIntervalRef.current);
             cloudUploadIntervalRef.current = null;
@@ -119,6 +162,10 @@ export default function Home() {
         });
 
         xhr.addEventListener('abort', () => {
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+          }
           if (cloudUploadIntervalRef.current) {
             clearInterval(cloudUploadIntervalRef.current);
             cloudUploadIntervalRef.current = null;
@@ -127,6 +174,10 @@ export default function Home() {
         });
 
         xhr.addEventListener('timeout', () => {
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+          }
           if (cloudUploadIntervalRef.current) {
             clearInterval(cloudUploadIntervalRef.current);
             cloudUploadIntervalRef.current = null;
@@ -134,7 +185,7 @@ export default function Home() {
           reject(new Error('Upload timeout'));
         });
 
-        xhr.open('POST', '/api/upload');
+        xhr.open('POST', `/api/upload?uploadId=${uploadId}`);
         xhr.timeout = 600000;
         xhr.send(formData);
       });

@@ -1,11 +1,19 @@
 import B2 from 'backblaze-b2';
 import { Readable } from 'stream';
+import { EventEmitter } from 'events';
 
 interface B2Config {
   applicationKeyId: string;
   applicationKey: string;
   bucketId: string;
   bucketName: string;
+}
+
+export interface UploadProgressEvent {
+  type: 'progress' | 'complete' | 'error';
+  percent?: number;
+  message?: string;
+  error?: string;
 }
 
 class BackblazeService {
@@ -68,7 +76,8 @@ class BackblazeService {
   async uploadFile(
     fileBuffer: Buffer,
     fileName: string,
-    contentType: string
+    contentType: string,
+    progressEmitter?: EventEmitter
   ): Promise<{ fileId: string; fileName: string }> {
     await this.ensureAuthorized();
 
@@ -76,6 +85,50 @@ class BackblazeService {
       const uploadUrlResponse = await this.b2.getUploadUrl({
         bucketId: this.config.bucketId,
       });
+
+      if (progressEmitter) {
+        progressEmitter.emit('progress', { type: 'progress', percent: 0 });
+      }
+
+      const chunkSize = 1024 * 1024 * 5;
+      const totalSize = fileBuffer.length;
+      
+      if (totalSize <= chunkSize) {
+        const uploadResponse = await this.b2.uploadFile({
+          uploadUrl: uploadUrlResponse.data.uploadUrl,
+          uploadAuthToken: uploadUrlResponse.data.authorizationToken,
+          fileName: fileName,
+          data: fileBuffer,
+          contentType: contentType,
+        });
+
+        if (progressEmitter) {
+          progressEmitter.emit('progress', { type: 'progress', percent: 100 });
+        }
+
+        return {
+          fileId: uploadResponse.data.fileId,
+          fileName: uploadResponse.data.fileName,
+        };
+      }
+
+      const numChunks = Math.ceil(totalSize / chunkSize);
+      let uploadedBytes = 0;
+
+      for (let i = 0; i < numChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, totalSize);
+        const chunk = fileBuffer.slice(start, end);
+        
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        uploadedBytes += chunk.length;
+        const percent = Math.round((uploadedBytes / totalSize) * 100);
+        
+        if (progressEmitter) {
+          progressEmitter.emit('progress', { type: 'progress', percent });
+        }
+      }
 
       const uploadResponse = await this.b2.uploadFile({
         uploadUrl: uploadUrlResponse.data.uploadUrl,
@@ -85,6 +138,10 @@ class BackblazeService {
         contentType: contentType,
       });
 
+      if (progressEmitter) {
+        progressEmitter.emit('progress', { type: 'progress', percent: 100 });
+      }
+
       return {
         fileId: uploadResponse.data.fileId,
         fileName: uploadResponse.data.fileName,
@@ -93,9 +150,12 @@ class BackblazeService {
       if (error?.response?.status === 401 || error?.message?.includes('unauthorized')) {
         this.authorizationToken = null;
         await this.ensureAuthorized();
-        return this.uploadFile(fileBuffer, fileName, contentType);
+        return this.uploadFile(fileBuffer, fileName, contentType, progressEmitter);
       }
       console.error('Backblaze upload error:', error);
+      if (progressEmitter) {
+        progressEmitter.emit('progress', { type: 'error', error: 'Failed to upload file to Backblaze' });
+      }
       throw new Error('Failed to upload file to Backblaze');
     }
   }

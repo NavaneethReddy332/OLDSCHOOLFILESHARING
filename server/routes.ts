@@ -6,14 +6,45 @@ import { randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import { insertGuestbookEntrySchema } from "@shared/schema";
 import Busboy from "busboy";
+import { EventEmitter } from "events";
+
+const uploadProgressEmitters = new Map<string, EventEmitter>();
 
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.get("/api/upload-progress/:uploadId", (req, res) => {
+    const { uploadId } = req.params;
+    
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    
+    res.write('data: {"type":"connected"}\n\n');
+    
+    const emitter = new EventEmitter();
+    uploadProgressEmitters.set(uploadId, emitter);
+    
+    const progressListener = (data: any) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+    
+    emitter.on('progress', progressListener);
+    
+    req.on('close', () => {
+      emitter.off('progress', progressListener);
+      uploadProgressEmitters.delete(uploadId);
+    });
+  });
+
   app.post("/api/upload", async (req, res) => {
     const startTime = Date.now();
+    const uploadId = req.query.uploadId as string || randomBytes(16).toString('hex');
+    const progressEmitter = uploadProgressEmitters.get(uploadId);
+    
     const busboy = Busboy({ 
       headers: req.headers,
       limits: {
@@ -74,7 +105,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const b2Upload = await backblazeService.uploadFile(
           fileBuffer,
           uniqueFileName,
-          mimeType || 'application/octet-stream'
+          mimeType || 'application/octet-stream',
+          progressEmitter
         );
 
         const { password, maxDownloads, isOneTime } = formFields;
