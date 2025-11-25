@@ -68,6 +68,16 @@ export default function Home() {
             const spinnerChars = ['|', '/', '-', '\\'];
             const spinnerIndex = Math.floor(Date.now() / 150) % spinnerChars.length;
             updateLastLog(`UPLOADING TO BACKBLAZE  ${data.percent}% ${spinnerChars[spinnerIndex]}`);
+          } else if (data.type === 'complete') {
+            if (eventSourceRef.current) {
+              eventSourceRef.current.close();
+              eventSourceRef.current = null;
+            }
+          } else if (data.type === 'error') {
+            if (eventSourceRef.current) {
+              eventSourceRef.current.close();
+              eventSourceRef.current = null;
+            }
           }
         } catch (error) {
           console.error('Error parsing SSE message:', error);

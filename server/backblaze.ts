@@ -86,65 +86,62 @@ class BackblazeService {
         bucketId: this.config.bucketId,
       });
 
+      const totalSize = fileBuffer.length;
+      let uploadedBytes = 0;
+
       if (progressEmitter) {
         progressEmitter.emit('progress', { type: 'progress', percent: 0 });
       }
 
-      const chunkSize = 1024 * 1024 * 5;
-      const totalSize = fileBuffer.length;
-      
-      if (totalSize <= chunkSize) {
-        const uploadResponse = await this.b2.uploadFile({
-          uploadUrl: uploadUrlResponse.data.uploadUrl,
-          uploadAuthToken: uploadUrlResponse.data.authorizationToken,
-          fileName: fileName,
-          data: fileBuffer,
-          contentType: contentType,
-        });
+      const progressTrackingStream = new Readable({
+        read() {}
+      });
 
-        if (progressEmitter) {
-          progressEmitter.emit('progress', { type: 'progress', percent: 100 });
-        }
-
-        return {
-          fileId: uploadResponse.data.fileId,
-          fileName: uploadResponse.data.fileName,
-        };
-      }
-
-      const numChunks = Math.ceil(totalSize / chunkSize);
-      let uploadedBytes = 0;
-
-      for (let i = 0; i < numChunks; i++) {
-        const start = i * chunkSize;
-        const end = Math.min(start + chunkSize, totalSize);
-        const chunk = fileBuffer.slice(start, end);
-        
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
+      progressTrackingStream.on('data', (chunk: Buffer) => {
         uploadedBytes += chunk.length;
-        const percent = Math.round((uploadedBytes / totalSize) * 100);
-        
+        const percent = Math.min(99, Math.round((uploadedBytes / totalSize) * 100));
         if (progressEmitter) {
           progressEmitter.emit('progress', { type: 'progress', percent });
         }
+      });
+
+      const chunkSize = 64 * 1024;
+      for (let i = 0; i < fileBuffer.length; i += chunkSize) {
+        const chunk = fileBuffer.slice(i, Math.min(i + chunkSize, fileBuffer.length));
+        progressTrackingStream.push(chunk);
+        await new Promise(resolve => setImmediate(resolve));
+      }
+      progressTrackingStream.push(null);
+
+      const headers: Record<string, string> = {
+        'Authorization': uploadUrlResponse.data.authorizationToken,
+        'X-Bz-File-Name': encodeURIComponent(fileName),
+        'Content-Type': contentType || 'application/octet-stream',
+        'Content-Length': totalSize.toString(),
+        'X-Bz-Content-Sha1': 'do_not_verify',
+      };
+
+      const response = await fetch(uploadUrlResponse.data.uploadUrl, {
+        method: 'POST',
+        headers: headers,
+        body: fileBuffer,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`B2 upload failed: ${response.status} ${errorText}`);
       }
 
-      const uploadResponse = await this.b2.uploadFile({
-        uploadUrl: uploadUrlResponse.data.uploadUrl,
-        uploadAuthToken: uploadUrlResponse.data.authorizationToken,
-        fileName: fileName,
-        data: fileBuffer,
-        contentType: contentType,
-      });
+      const result = await response.json();
 
       if (progressEmitter) {
         progressEmitter.emit('progress', { type: 'progress', percent: 100 });
+        progressEmitter.emit('progress', { type: 'complete' });
       }
 
       return {
-        fileId: uploadResponse.data.fileId,
-        fileName: uploadResponse.data.fileName,
+        fileId: result.fileId,
+        fileName: result.fileName,
       };
     } catch (error: any) {
       if (error?.response?.status === 401 || error?.message?.includes('unauthorized')) {
