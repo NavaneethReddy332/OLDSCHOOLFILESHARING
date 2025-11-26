@@ -219,6 +219,7 @@ class BackblazeService {
       return {
         fileId: result.fileId,
         fileName: result.fileName,
+        uploadedBytes: uploadedBytes,
       };
     } catch (error: any) {
       if (error?.response?.status === 401 || error?.message?.includes('unauthorized')) {
@@ -353,6 +354,7 @@ class BackblazeService {
       return {
         fileId: finishResponse.data.fileId,
         fileName: finishResponse.data.fileName,
+        uploadedBytes: totalUploaded,
       };
     } catch (error: any) {
       console.error('Backblaze large file upload error:', error);

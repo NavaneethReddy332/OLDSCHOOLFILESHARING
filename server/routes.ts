@@ -156,6 +156,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error('File size exceeds 1GB limit');
         }
 
+        // Validate uploaded size matches expected size
+        const uploadedBytes = b2Upload.uploadedBytes || 0;
+        const sizeTolerance = 1024; // 1KB tolerance for metadata
+        if (Math.abs(uploadedBytes - fileSize) > sizeTolerance) {
+          console.error(`[UPLOAD] Size mismatch: expected ${fileSize}, got ${uploadedBytes}`);
+          // Clean up the uploaded file from Backblaze
+          try {
+            await backblazeService.deleteFile(uniqueFileName, b2Upload.fileId);
+          } catch (cleanupError) {
+            console.error('[UPLOAD] Failed to clean up mismatched file:', cleanupError);
+          }
+          throw new Error(`File size mismatch: expected ${fileSize} bytes, but ${uploadedBytes} bytes were uploaded`);
+        }
+
+        console.log(`[UPLOAD] Upload successful: ${(uploadedBytes / 1024 / 1024).toFixed(2)}MB uploaded`);
+
         const { password, maxDownloads, isOneTime } = formFields;
         
         let passwordHash = null;
@@ -170,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           code,
           filename: uniqueFileName,
           originalName: filename,
-          size: uploadedSize,
+          size: fileSize,
           mimetype: mimeType,
           expiresAt,
           passwordHash,
