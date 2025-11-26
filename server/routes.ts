@@ -71,8 +71,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { filename, encoding, mimeType } = info;
         
+        // Get file size from form fields (sent by client)
+        const fileSize = parseInt(formFields.fileSize || '0');
+        const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024; // 100MB
+        
+        if (!fileSize || fileSize <= 0) {
+          if (progressEmitter) {
+            progressEmitter.emit('progress', { 
+              type: 'error', 
+              error: 'Invalid file size' 
+            });
+          }
+          fileStream.resume();
+          res.status(400).json({ error: 'File size must be provided' });
+          return;
+        }
+        
         // Validate file before processing
-        const validation = validateFile(filename, mimeType || 'application/octet-stream');
+        const validation = validateFile(filename, mimeType || 'application/octet-stream', fileSize);
         
         if (!validation.valid) {
           if (progressEmitter) {
@@ -101,38 +117,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${filename}`;
         
-        let uploadedSize = 0;
-        const chunks: Buffer[] = [];
-        let fileTruncated = false;
+        console.log(`[UPLOAD] File size: ${(fileSize / 1024 / 1024).toFixed(2)}MB, using ${fileSize >= LARGE_FILE_THRESHOLD ? 'large file API' : 'standard upload'}`);
         
-        fileStream.on('data', (chunk: Buffer) => {
-          uploadedSize += chunk.length;
-          chunks.push(chunk);
-        });
-
+        // Set up limit handler
+        let fileTruncated = false;
         fileStream.on('limit', () => {
           fileTruncated = true;
           console.error(`[UPLOAD] File size limit exceeded: ${filename}`);
-        });
-
-        await new Promise<void>((resolve, reject) => {
-          fileStream.on('end', () => {
-            if (fileTruncated || (fileStream as any).truncated) {
-              reject(new Error('File size exceeds 1GB limit'));
-            } else {
-              resolve();
-            }
-          });
-          fileStream.on('error', reject);
+          if (progressEmitter) {
+            progressEmitter.emit('progress', { type: 'error', error: 'File size exceeds 1GB limit' });
+          }
         });
         
-        const fileBuffer = Buffer.concat(chunks);
-        const b2Upload = await backblazeService.uploadFile(
-          fileBuffer,
-          uniqueFileName,
-          mimeType || 'application/octet-stream',
-          progressEmitter
-        );
+        let b2Upload;
+        
+        if (fileSize >= LARGE_FILE_THRESHOLD) {
+          // Use large file API for files >= 100MB
+          b2Upload = await backblazeService.uploadLargeFile(
+            fileStream,
+            uniqueFileName,
+            mimeType || 'application/octet-stream',
+            fileSize,
+            progressEmitter
+          );
+        } else {
+          // Use stream upload for files < 100MB
+          b2Upload = await backblazeService.uploadFileStream(
+            fileStream,
+            uniqueFileName,
+            mimeType || 'application/octet-stream',
+            fileSize,
+            progressEmitter
+          );
+        }
+        
+        // Check if file was truncated during upload
+        if (fileTruncated) {
+          throw new Error('File size exceeds 1GB limit');
+        }
 
         const { password, maxDownloads, isOneTime } = formFields;
         
