@@ -77,12 +77,28 @@ Preferred communication style: Simple, everyday language.
 
 **Endpoints**
 - `POST /api/upload` - Accepts file uploads via multipart form data, returns share code and file metadata
+  - Rate limited to 10 requests per 15 minutes per IP
+  - Validates file types and blocks dangerous executables
+  - Validates and whitelists expiration times (1hr, 12hr, 24hr, 7 days)
 - `GET /api/file/:code` - Retrieves file metadata for display before download
+  - Rate limited to 30 requests per 15 minutes per IP
+- `POST /api/verify-password` - Verifies password for protected files
+  - Rate limited to 5 attempts per 15 minutes per IP to prevent brute force attacks
 - Download functionality integrated through code-based retrieval
+  - Rate limited to 20 downloads per 15 minutes per IP
+
+**Security Features (Added November 2025)**
+- **Rate Limiting**: IP-based rate limiting on all critical endpoints to prevent abuse
+- **File Type Validation**: Blocks dangerous executables (.exe, .bat, .sh, etc.) and detects double-extension bypass attempts
+- **Expiration Validation**: Server-side whitelisting of expiration times prevents indefinite file retention
+- **Error Handling**: Proper rollback on failed downloads to prevent download count corruption
 
 **Validation**
 - Zod schemas generated from Drizzle ORM schemas for runtime type validation
 - Input validation using @hookform/resolvers for form handling
+- Custom middleware for file type validation (server/middleware/fileValidation.ts)
+- Custom middleware for expiration time validation (server/middleware/expirationValidator.ts)
+- Rate limiting middleware using express-rate-limit (server/middleware/rateLimiter.ts)
 
 ### Development & Build Process
 
