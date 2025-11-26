@@ -7,16 +7,16 @@ export default function ErrorPage() {
   return (
     <RetroLayout>
       <center>
-        <h1><span className="text-red-500">ERROR!</span></h1>
+        <h1><span style={{ color: 'var(--text-primary)' }}>ERROR!</span></h1>
         <img src="https://win98icons.alexmeub.com/icons/png/msg_error-0.png" alt="Critical Error" width="64" />
         <br /><br />
-        <h2 className="text-xl text-white p-2 inline-block font-mono border-2" style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--text-primary)' }}>FATAL EXCEPTION</h2>
+        <h2 className="text-xl p-2 inline-block font-mono border-2" style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--text-primary)', color: 'var(--text-primary)' }}>FATAL EXCEPTION</h2>
       </center>
       
       <br />
       
-      <div className="border-2 p-4" style={{ borderColor: '#ff4444', backgroundColor: 'var(--panel)' }}>
-        <p className="font-mono text-red-400 font-bold mb-4">
+      <div className="border-2 p-4" style={{ borderColor: 'var(--accent)', backgroundColor: 'var(--panel)' }}>
+        <p className="font-mono font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
           A fatal exception 0E has occurred at 0028:C0034B23 in VXD VMM(01) + 000034B23. 
           The current application will be terminated.
         </p>
@@ -30,7 +30,7 @@ export default function ErrorPage() {
       <br />
       
       <center>
-        <button onClick={() => setLocation("/")} className="retro-button text-red-400 font-bold">
+        <button onClick={() => setLocation("/")} className="retro-button font-bold" style={{ color: 'var(--text-primary)' }}>
            &lt;&lt; RETURN TO SAFETY
         </button>
       </center>

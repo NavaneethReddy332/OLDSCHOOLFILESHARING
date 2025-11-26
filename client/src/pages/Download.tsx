@@ -301,7 +301,7 @@ export default function Download() {
                     <><img src="https://win98icons.alexmeub.com/icons/png/lock_key-0.png" width="16" className="inline" alt="Protected" /> Password Protected<br /></>
                   )}
                   {fileInfo.isOneTime === 1 && (
-                    <><b className="text-red-400">⚠ One-time download only</b><br /></>
+                    <><b style={{ color: 'var(--text-primary)' }}>⚠ One-time download only</b><br /></>
                   )}
                   Downloads: <span data-testid="text-download-count">{fileInfo.downloadCount}</span>
                   {fileInfo.maxDownloads && (
@@ -315,7 +315,7 @@ export default function Download() {
           <br />
           
           {showPasswordInput && (
-            <div className="mb-4 border-2 p-3" style={{ backgroundColor: 'var(--panel-light)', borderColor: '#ffaa00' }}>
+            <div className="mb-4 border-2 p-3" style={{ backgroundColor: 'var(--panel-light)', borderColor: 'var(--accent)' }}>
               <label className="block mb-2 font-bold">Enter Password:</label>
               <input 
                 type="password" 
@@ -330,7 +330,7 @@ export default function Download() {
           )}
           
           {downloadLink && (
-            <div className="mb-4 border-2 p-3" style={{ backgroundColor: 'var(--panel-light)', borderColor: '#44ff44' }}>
+            <div className="mb-4 border-2 p-3" style={{ backgroundColor: 'var(--panel-light)', borderColor: 'var(--accent)' }}>
               <label className="block mb-2 font-bold">Your Shareable Download Link:</label>
               <div className="flex gap-2">
                 <input 
@@ -379,7 +379,7 @@ export default function Download() {
       {status === 'error' && (
         <center>
           <img src="https://win98icons.alexmeub.com/icons/png/msg_warning-0.png" alt="Error" />
-          <h3 className="text-red-400 mt-4">Error 404: File Not Found</h3>
+          <h3 className="mt-4" style={{ color: 'var(--text-primary)' }}>Error 404: File Not Found</h3>
           <p>The file you are looking for has expired or does not exist.</p>
           <br />
           <button onClick={() => setLocation("/")} className="retro-button" data-testid="button-back-home">Back to Home</button>

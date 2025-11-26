@@ -17,7 +17,7 @@ export default function UploadResult() {
   return (
     <RetroLayout>
       <center>
-        <h1><span className="text-green-400">SUCCESS!</span></h1>
+        <h1><span style={{ color: 'var(--accent)' }}>SUCCESS!</span></h1>
         <br />
         <p>Your file has been uploaded to the World Wide Web.</p>
       </center>

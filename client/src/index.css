@@ -7,6 +7,11 @@
 }
 
 @layer base {
+  /* CRITICAL: Force all elements to have sharp corners (no rounding) */
+  * {
+    border-radius: 0 !important;
+  }
+
   :root {
     /* BLACK, BLUE, WHITE Theme */
     --surface: #000000;
@@ -28,6 +33,26 @@
     --terminal-glow: #00d4ff;
     --link-color: #4a90e2;
     --link-active: #5ba3ff;
+
+    /* Shadcn semantic tokens mapped to BLACK/BLUE/WHITE palette */
+    --background: #000000;
+    --foreground: #ffffff;
+    --card: #0a1929;
+    --card-foreground: #ffffff;
+    --popover: #0a1929;
+    --popover-foreground: #ffffff;
+    --primary: #4a90e2;
+    --primary-foreground: #ffffff;
+    --secondary: #1a2942;
+    --secondary-foreground: #ffffff;
+    --muted: #1a2942;
+    --muted-foreground: #b0c4de;
+    --destructive: #4a90e2;
+    --destructive-foreground: #ffffff;
+    --border: #4a90e2;
+    --input: #0d1b2a;
+    --ring: #4a90e2;
+    --radius: 0;
   }
 
   body {

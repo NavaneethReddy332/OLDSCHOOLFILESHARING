@@ -362,7 +362,8 @@ export default function Home() {
                   {isUploading && (
                     <button 
                       onClick={handleCancelUpload}
-                      className="retro-button text-red-400"
+                      className="retro-button"
+                      style={{ color: 'var(--text-primary)' }}
                       data-testid="button-cancel-upload"
                     >
                       Cancel

@@ -80,14 +80,14 @@ export default function Guestbook() {
     <RetroLayout>
       <center>
         <h2 className="text-2xl sm:text-3xl font-bold mb-4">
-          <span className="text-blue-700">★ GUESTBOOK ★</span>
+          <span style={{ color: 'var(--accent)' }}>★ GUESTBOOK ★</span>
         </h2>
         <p className="mb-6">Sign our retro guestbook! Leave a message for other visitors.</p>
       </center>
 
       {/* Sign Guestbook Form */}
-      <div className="bg-[#eeeeee] border-2 border-gray-400 p-4 sm:p-6 mb-6">
-        <h3 className="font-bold text-lg mb-4 text-[#000080]">Sign the Guestbook</h3>
+      <div className="border-2 p-4 sm:p-6 mb-6" style={{ backgroundColor: 'var(--panel-light)', borderColor: 'var(--border-highlight)' }}>
+        <h3 className="font-bold text-lg mb-4" style={{ color: 'var(--accent)' }}>Sign the Guestbook</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -182,7 +182,7 @@ export default function Guestbook() {
         )}
 
         {!isLoading && entries && entries.length === 0 && (
-          <div className="border-2 p-4 text-center" style={{ backgroundColor: 'var(--panel-light)', borderColor: '#ffaa00' }}>
+          <div className="border-2 p-4 text-center" style={{ backgroundColor: 'var(--panel-light)', borderColor: 'var(--accent)' }}>
             <p>No entries yet. Be the first to sign our guestbook!</p>
           </div>
         )}
@@ -232,10 +232,10 @@ export default function Guestbook() {
         )}
       </div>
 
-      <hr className="border-gray-400 my-6" />
+      <hr className="my-6" style={{ borderColor: 'var(--border-shadow)' }} />
       
       <center>
-        <small className="text-gray-600">
+        <small style={{ color: 'var(--text-secondary)' }}>
           <img 
             src="https://win98icons.alexmeub.com/icons/png/globe_internet-0.png" 
             width="24" 
