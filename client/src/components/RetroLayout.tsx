@@ -196,27 +196,22 @@ export function RetroLayout({ children }: RetroLayoutProps) {
 
           {/* Terminal Section with CRT Effects */}
           <div 
-            className="relative border-2 h-64 sm:h-80 overflow-hidden transition-colors duration-300"
-            style={{
-              backgroundColor: 'var(--terminal-bg)',
-              borderColor: 'var(--border-shadow)',
-              boxShadow: 'inset 0 0 40px color-mix(in srgb, var(--terminal-glow) 15%, transparent), 0 0 20px color-mix(in srgb, var(--terminal-glow) 10%, transparent)',
-            }}
+            className="relative h-64 sm:h-80 overflow-hidden"
           >
             {/* CRT Scanlines Effect */}
             <div 
               className="absolute inset-0 pointer-events-none z-10"
               style={{
-                background: 'repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 2px)',
+                background: 'repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.08) 0px, rgba(0, 0, 0, 0.08) 1px, transparent 1px, transparent 2px)',
                 animation: 'scanline 8s linear infinite',
               }}
             />
             
             {/* CRT Flicker Effect */}
             <div 
-              className="absolute inset-0 pointer-events-none z-10 opacity-10"
+              className="absolute inset-0 pointer-events-none z-10 opacity-5"
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'rgba(255, 255, 255, 0.03)',
                 animation: 'flicker 0.15s infinite',
               }}
             />
@@ -224,11 +219,11 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             {/* Terminal Content */}
             <div 
               ref={terminalScrollRef}
-              className="retro-terminal-scroll relative h-full overflow-y-auto p-3 font-mono text-[10px] sm:text-xs font-bold"
+              className="retro-terminal-scroll relative h-full overflow-y-auto p-3 font-mono text-[10px] sm:text-xs font-light"
             >
               {/* Header Bar */}
-              <div className="border-b pb-1 mb-2 text-center sticky top-0 backdrop-blur-sm z-20" style={{ borderColor: 'color-mix(in srgb, var(--terminal-text) 30%, transparent)', backgroundColor: 'color-mix(in srgb, var(--terminal-text) 10%, transparent)' }}>
-                <span className="tracking-widest" style={{ color: 'var(--terminal-text)' }}>
+              <div className="pb-2 mb-3 text-center sticky top-0 z-20" style={{ color: 'color-mix(in srgb, var(--terminal-text) 70%, transparent)' }}>
+                <span className="tracking-widest text-[9px] sm:text-[10px]">
                   ◆ SYSTEM TERMINAL ◆
                 </span>
               </div>
@@ -269,13 +264,13 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                       className={`break-all ${getColorClass()} transition-all duration-300`}
                       style={{
                         ...getInlineColor(),
-                        textShadow: `0 0 5px currentColor`,
+                        textShadow: `0 0 3px currentColor`,
                         animation: log.isNew ? 'typeIn 0.3s ease-out' : 'none',
                       }}
                     >
-                      <span className="text-[9px]" style={{ color: 'color-mix(in srgb, var(--terminal-text) 60%, transparent)' }}>{log.timestamp}</span>
-                      <span className="mx-1 font-bold">{getPrefix()}</span>
-                      <span className="opacity-90">{log.message}</span>
+                      <span className="text-[8px] opacity-50">{log.timestamp}</span>
+                      <span className="mx-1">{getPrefix()}</span>
+                      <span className="opacity-80">{log.message}</span>
                     </div>
                   );
                 })}
