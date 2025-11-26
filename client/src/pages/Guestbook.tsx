@@ -152,7 +152,7 @@ export default function Guestbook() {
               required
               data-testid="textarea-message"
             />
-            <small className="text-gray-600 dark:text-gray-400">{message.length}/500 characters</small>
+            <small style={{ color: 'var(--text-secondary)' }}>{message.length}/500 characters</small>
           </div>
 
           <button 
@@ -166,23 +166,23 @@ export default function Guestbook() {
         </form>
       </div>
 
-      <hr className="border-gray-400 dark:border-gray-600 my-6" />
+      <hr className="my-6" style={{ borderColor: 'var(--border-shadow)' }} />
 
       {/* Guestbook Entries */}
       <div>
-        <h3 className="font-bold text-lg mb-4 text-blue-800 dark:text-blue-400">Recent Entries</h3>
+        <h3 className="font-bold text-lg mb-4" style={{ color: 'var(--accent)' }}>Recent Entries</h3>
         
         {isLoading && (
           <center>
             <p>Loading guestbook entries...</p>
-            <div className="w-64 h-4 border-2 border-gray-500 dark:border-gray-400 bg-white dark:bg-gray-800 p-0.5 relative mt-2">
-              <div className="h-full bg-blue-700 dark:bg-blue-500 animate-[width_2s_ease-in-out_infinite]" style={{width: '50%'}}></div>
+            <div className="w-64 h-4 border-2 p-0.5 relative mt-2" style={{ borderColor: 'var(--border-highlight)', backgroundColor: 'var(--input-bg)' }}>
+              <div className="h-full animate-[width_2s_ease-in-out_infinite]" style={{ width: '50%', backgroundColor: 'var(--accent)' }}></div>
             </div>
           </center>
         )}
 
         {!isLoading && entries && entries.length === 0 && (
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-600 dark:border-yellow-500 p-4 text-center">
+          <div className="border-2 p-4 text-center" style={{ backgroundColor: 'var(--panel-light)', borderColor: '#ffaa00' }}>
             <p>No entries yet. Be the first to sign our guestbook!</p>
           </div>
         )}
@@ -192,27 +192,27 @@ export default function Guestbook() {
             {entries.map((entry) => (
               <div 
                 key={entry.id} 
-                className="bg-white dark:bg-gray-800 border-2 border-gray-400 dark:border-gray-600 p-4"
+                className="border-2 p-4" style={{ backgroundColor: 'var(--panel-light)', borderColor: 'var(--border-highlight)' }}
                 data-testid={`entry-${entry.id}`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                   <div>
-                    <span className="font-bold text-blue-700 dark:text-blue-400" data-testid={`name-${entry.id}`}>
+                    <span className="font-bold" style={{ color: 'var(--accent)' }} data-testid={`name-${entry.id}`}>
                       {entry.displayName}
                     </span>
                     {entry.location && (
-                      <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
+                      <span className="text-sm ml-2" style={{ color: 'var(--text-secondary)' }}>
                         from {entry.location}
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                     {formatDate(entry.createdAt)}
                   </span>
                 </div>
                 
                 {entry.favoriteSystem && (
-                  <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                  <div className="text-sm mb-2">
                     <img 
                       src="https://win98icons.alexmeub.com/icons/png/computer_explorer-3.png" 
                       width="16" 
@@ -223,7 +223,7 @@ export default function Guestbook() {
                   </div>
                 )}
                 
-                <div className="bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 p-3 rounded" data-testid={`message-${entry.id}`}>
+                <div className="border-2 p-3" style={{ backgroundColor: 'var(--panel)', borderColor: 'var(--border-shadow)' }} data-testid={`message-${entry.id}`}>
                   {entry.message}
                 </div>
               </div>

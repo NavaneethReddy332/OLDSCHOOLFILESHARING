@@ -267,7 +267,7 @@ export default function Home() {
     <RetroLayout>
       <div className="text-center mb-6">
         <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-          <span className="text-red-600 dark:text-red-400">Upload Files Now!</span>
+          <span style={{ color: 'var(--accent)' }}>Upload Files Now!</span>
         </h2>
         <p className="text-sm sm:text-base">Share files with your friends easily. No registration required.</p>
       </div>
@@ -362,7 +362,7 @@ export default function Home() {
                   {isUploading && (
                     <button 
                       onClick={handleCancelUpload}
-                      className="retro-button bg-red-600 dark:bg-red-700"
+                      className="retro-button text-red-400"
                       data-testid="button-cancel-upload"
                     >
                       Cancel

@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { useTerminal } from '../context/TerminalContext';
-import { useTheme } from './ThemeProvider';
-import { Moon, Sun } from 'lucide-react';
 import generatedVideo from '@assets/Cinematic_Tech_Startup_Intro_Animation_1764007246565.mp4';
 
 interface RetroLayoutProps {
@@ -13,7 +11,6 @@ export function RetroLayout({ children }: RetroLayoutProps) {
   const { logs } = useTerminal();
   const terminalScrollRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (terminalScrollRef.current) {
@@ -41,31 +38,11 @@ export function RetroLayout({ children }: RetroLayoutProps) {
           </div>
           
           <div className="flex items-center gap-2 flex-1 justify-end">
-            {/* Theme Toggle Button */}
-            <button
-              onClick={toggleTheme}
-              className="retro-button text-[10px] sm:text-xs px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2"
-              aria-label="Toggle theme"
-              data-testid="button-theme-toggle"
-              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-            >
-              {theme === 'light' ? (
-                <>
-                  <span className="hidden sm:inline">DARK</span>
-                  <Moon className="w-3 h-3 sm:w-4 sm:h-4" />
-                </>
-              ) : (
-                <>
-                  <span className="hidden sm:inline">LIGHT</span>
-                  <Sun className="w-3 h-3 sm:w-4 sm:h-4" />
-                </>
-              )}
-            </button>
-            
             {/* Hamburger Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="flex flex-col gap-1 p-2 hover:bg-white/10 transition-colors rounded"
+              className="flex flex-col gap-1 p-2 hover:bg-white/10 transition-colors border-2"
+              style={{ borderColor: 'var(--border-highlight)' }}
               aria-label="Toggle menu"
               data-testid="button-hamburger-menu"
             >
@@ -233,10 +210,10 @@ export function RetroLayout({ children }: RetroLayoutProps) {
                 {logs.map((log, index) => {
                   const getColorClass = () => {
                     switch (log.type) {
-                      case 'error': return 'text-red-500 dark:text-red-400';
-                      case 'warning': return 'text-yellow-500 dark:text-yellow-400';
-                      case 'success': return 'text-cyan-400 dark:text-cyan-300';
-                      case 'system': return 'text-blue-400 dark:text-blue-300';
+                      case 'error': return 'text-red-500';
+                      case 'warning': return 'text-yellow-400';
+                      case 'success': return 'text-cyan-400';
+                      case 'system': return 'text-blue-400';
                       default: return '';
                     }
                   };

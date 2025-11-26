@@ -17,16 +17,16 @@ export default function UploadResult() {
   return (
     <RetroLayout>
       <center>
-        <h1><span className="text-green-600 dark:text-green-400">SUCCESS!</span></h1>
+        <h1><span className="text-green-400">SUCCESS!</span></h1>
         <br />
         <p>Your file has been uploaded to the World Wide Web.</p>
       </center>
       
       <br />
       
-      <div className="border-2 border-gray-800 dark:border-gray-200 p-4 bg-yellow-100 dark:bg-yellow-900/30 text-center">
+      <div className="border-2 p-4 text-center" style={{ borderColor: 'var(--accent)', backgroundColor: 'var(--panel)' }}>
         <p><b>YOUR SECRET CODE:</b></p>
-        <h2 className="text-4xl font-mono tracking-widest bg-white dark:bg-gray-800 border border-gray-800 dark:border-gray-200 text-black dark:text-white inline-block p-2 my-2">{code}</h2>
+        <h2 className="text-4xl font-mono tracking-widest border-2 inline-block p-2 my-2" style={{ backgroundColor: 'var(--terminal-bg)', borderColor: 'var(--accent)', color: 'var(--terminal-text)' }}>{code}</h2>
         <p className="text-sm">Give this code to your friend.</p>
       </div>
       
@@ -34,7 +34,7 @@ export default function UploadResult() {
       
       <p style={{ textAlign: "center" }}>
         <b>Direct Link:</b><br />
-        <a href={`/download/${code}`} className="text-blue-600 dark:text-blue-400 underline" data-testid="link-download">
+        <a href={`/download/${code}`} className="underline" style={{ color: 'var(--accent)' }} data-testid="link-download">
           {typeof window !== 'undefined' ? `${window.location.origin}/download/${code}` : `/download/${code}`}
         </a>
       </p>
