@@ -8,65 +8,26 @@
 
 @layer base {
   :root {
-    /* Bright Theme - Vintage Amber/Beige */
-    --surface: #f4ede0;
-    --panel: #d9c7a3;
-    --panel-light: #e8dcc1;
-    --border-highlight: #fff2c7;
-    --border-shadow: #9c7a4a;
-    --border-dark: #6b5433;
-    --text-primary: #2d1f0f;
-    --text-secondary: #5c4a33;
-    --accent: #8b5e34;
-    --accent-hover: #a67347;
-    --header-bg: #8b5e34;
-    --header-border: #fff2c7;
-    --header-text: #fff2c7;
-    --input-bg: #ffffff;
-    --terminal-bg: #1a1a1a;
-    --terminal-text: #00ff00;
-    --terminal-glow: #00ff00;
-    --link-color: #0066cc;
-    --link-active: #cc3333;
-  }
-
-  .dark {
-    /* Dark Theme - Vintage Purple */
-    --surface: #1c1029;
-    --panel: #2a153d;
-    --panel-light: #3d2252;
-    --border-highlight: #5e3d8f;
-    --border-shadow: #13091d;
-    --border-dark: #0a0510;
-    --text-primary: #e8d4ff;
-    --text-secondary: #b99dd6;
-    --accent: #a87bff;
-    --accent-hover: #c299ff;
-    --header-bg: #3d2252;
-    --header-border: #a87bff;
-    --header-text: #e8d4ff;
-    --input-bg: #2a153d;
-    --terminal-bg: #0d0614;
-    --terminal-text: #8affb3;
-    --terminal-glow: #8affb3;
-    --link-color: #9d7bff;
-    --link-active: #ff6b9d;
-  }
-
-  /* Smooth theme transitions */
-  @media (prefers-reduced-motion: no-preference) {
-    body,
-    .retro-border,
-    .retro-border-inset,
-    .retro-button,
-    .retro-input,
-    div,
-    section,
-    header {
-      transition: background-color 250ms ease, 
-                  color 250ms ease, 
-                  border-color 250ms ease;
-    }
+    /* BLACK, BLUE, WHITE Theme */
+    --surface: #000000;
+    --panel: #0a1929;
+    --panel-light: #1a2942;
+    --border-highlight: #4a90e2;
+    --border-shadow: #00264d;
+    --border-dark: #001a33;
+    --text-primary: #ffffff;
+    --text-secondary: #b0c4de;
+    --accent: #4a90e2;
+    --accent-hover: #5ba3ff;
+    --header-bg: #001a33;
+    --header-border: #4a90e2;
+    --header-text: #ffffff;
+    --input-bg: #0d1b2a;
+    --terminal-bg: #000000;
+    --terminal-text: #00d4ff;
+    --terminal-glow: #00d4ff;
+    --link-color: #4a90e2;
+    --link-active: #5ba3ff;
   }
 
   body {
@@ -197,22 +158,30 @@
     animation: cursor-blink 0.6s infinite;
   }
 
-  /* CRT Terminal Effects */
+  /* Enhanced CRT Terminal Effects */
   @keyframes scanline {
     0% { transform: translateY(-100%); }
     100% { transform: translateY(100%); }
   }
 
   @keyframes flicker {
-    0% { opacity: 0.1; }
-    50% { opacity: 0.15; }
-    100% { opacity: 0.1; }
+    0% { opacity: 0.15; }
+    10% { opacity: 0.2; }
+    20% { opacity: 0.12; }
+    30% { opacity: 0.18; }
+    40% { opacity: 0.1; }
+    50% { opacity: 0.25; }
+    60% { opacity: 0.15; }
+    70% { opacity: 0.2; }
+    80% { opacity: 0.12; }
+    90% { opacity: 0.18; }
+    100% { opacity: 0.15; }
   }
 
   @keyframes typeIn {
     from {
       opacity: 0;
-      transform: translateX(-5px);
+      transform: translateX(-8px);
     }
     to {
       opacity: 1;
@@ -222,10 +191,26 @@
 
   @keyframes glow {
     0%, 100% { 
-      text-shadow: 0 0 5px var(--terminal-glow), 0 0 10px var(--terminal-glow); 
+      text-shadow: 
+        0 0 5px var(--terminal-glow), 
+        0 0 10px var(--terminal-glow),
+        0 0 15px var(--terminal-glow); 
     }
     50% { 
-      text-shadow: 0 0 10px var(--terminal-glow), 0 0 20px var(--terminal-glow); 
+      text-shadow: 
+        0 0 10px var(--terminal-glow), 
+        0 0 20px var(--terminal-glow),
+        0 0 30px var(--terminal-glow),
+        0 0 40px var(--terminal-glow); 
+    }
+  }
+
+  @keyframes phosphor-glow {
+    0%, 100% { 
+      filter: brightness(1) contrast(1.1);
+    }
+    50% { 
+      filter: brightness(1.05) contrast(1.15);
     }
   }
 
