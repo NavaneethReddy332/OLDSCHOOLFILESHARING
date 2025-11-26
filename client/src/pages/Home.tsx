@@ -11,6 +11,7 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [maxDownloads, setMaxDownloads] = useState("");
   const [isOneTime, setIsOneTime] = useState(false);
+  const [expiresIn, setExpiresIn] = useState<"1" | "12" | "24" | "168">("24"); // hours - typed to prevent invalid values
   const [isUploading, setIsUploading] = useState(false);
   const { addLog, updateLastLog } = useTerminal();
   const { toast } = useToast();
@@ -101,6 +102,7 @@ export default function Home() {
       if (password) formData.append('password', password);
       if (maxDownloads) formData.append('maxDownloads', maxDownloads);
       if (isOneTime) formData.append('isOneTime', 'true');
+      formData.append('expiresIn', expiresIn); // hours
       formData.append('file', file);
 
       const data = await new Promise<any>((resolve, reject) => {
@@ -300,6 +302,21 @@ export default function Home() {
                       data-testid="input-password"
                     />
                     <PasswordStrengthMeter password={password} />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm mb-1">Expires In:</label>
+                    <select 
+                      value={expiresIn}
+                      onChange={(e) => setExpiresIn(e.target.value as "1" | "12" | "24" | "168")}
+                      className="retro-input w-full text-sm"
+                      data-testid="select-expires-in"
+                    >
+                      <option value="1">1 Hour</option>
+                      <option value="12">12 Hours</option>
+                      <option value="24">24 Hours (Default)</option>
+                      <option value="168">7 Days</option>
+                    </select>
                   </div>
                   
                   <div>

@@ -7,6 +7,14 @@ import bcrypt from "bcrypt";
 import { insertGuestbookEntrySchema } from "@shared/schema";
 import Busboy from "busboy";
 import { EventEmitter } from "events";
+import { 
+  passwordVerificationLimiter, 
+  downloadLimiter, 
+  uploadLimiter, 
+  codeLookupLimiter 
+} from "./middleware/rateLimiter";
+import { validateFile } from "./middleware/fileValidation";
+import { validateExpirationHours } from "./middleware/expirationValidator";
 
 const uploadProgressEmitters = new Map<string, EventEmitter>();
 
@@ -40,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.post("/api/upload", async (req, res) => {
+  app.post("/api/upload", uploadLimiter, async (req, res) => {
     const startTime = Date.now();
     const uploadId = req.query.uploadId as string || randomBytes(16).toString('hex');
     const progressEmitter = uploadProgressEmitters.get(uploadId);
@@ -63,6 +71,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { filename, encoding, mimeType } = info;
         
+        // Validate file before processing
+        const validation = validateFile(filename, mimeType || 'application/octet-stream');
+        
+        if (!validation.valid) {
+          if (progressEmitter) {
+            progressEmitter.emit('progress', { 
+              type: 'error', 
+              error: validation.error 
+            });
+          }
+          fileStream.resume(); // Drain the stream
+          res.status(400).json({ error: validation.error });
+          return;
+        }
+        
         let code = generateCode();
         let existingFile = await storage.getFileByCode(code);
         
@@ -71,8 +94,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           existingFile = await storage.getFileByCode(code);
         }
 
+        // Validate and sanitize expiration time (whitelist only allowed values)
+        const expiresInHours = validateExpirationHours(formFields.expiresIn);
         const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + 24);
+        expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
         const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${filename}`;
         
@@ -168,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     req.pipe(busboy);
   });
 
-  app.get("/api/file/:code", async (req, res) => {
+  app.get("/api/file/:code", codeLookupLimiter, async (req, res) => {
     try {
       const { code } = req.params;
       
@@ -205,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/file/:code/verify", async (req, res) => {
+  app.post("/api/file/:code/verify", passwordVerificationLimiter, async (req, res) => {
     try {
       const { code } = req.params;
       const { password } = req.body;
@@ -237,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/file/:code/get-download-link", async (req, res) => {
+  app.post("/api/file/:code/get-download-link", passwordVerificationLimiter, async (req, res) => {
     try {
       const { code } = req.params;
       const { password } = req.body;
@@ -295,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/download/:code", async (req, res) => {
+  app.post("/api/download/:code", downloadLimiter, async (req, res) => {
     const startTime = Date.now();
     try {
       const { code } = req.params;
@@ -323,10 +348,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Download limit reached" });
       }
 
+      // Increment download count BEFORE streaming
       await storage.incrementDownloadCount(file.id);
+      const currentDownloadCount = file.downloadCount + 1;
 
       console.log(`[DOWNLOAD] Streaming file from Backblaze: ${file.filename}`);
-      const fileStream = await backblazeService.downloadFileStream(file.filename);
+      
+      let fileStream;
+      try {
+        fileStream = await backblazeService.downloadFileStream(file.filename);
+      } catch (streamError) {
+        console.error(`[DOWNLOAD] Failed to get stream from Backblaze:`, streamError);
+        // Rollback download count if we can't get the stream
+        await storage.incrementDownloadCount(file.id, -1);
+        return res.status(500).json({ error: "Failed to retrieve file from storage" });
+      }
       
       res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
       res.setHeader("Content-Type", file.mimetype);
@@ -334,11 +370,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader("Cache-Control", "no-cache");
       
       let streamCompleted = false;
+      let bytesTransferred = 0;
+      
+      // Track actual bytes transferred
+      fileStream.on('data', (chunk: Buffer) => {
+        bytesTransferred += chunk.length;
+      });
       
       fileStream.on('end', () => {
         streamCompleted = true;
         const duration = Date.now() - startTime;
-        console.log(`[DOWNLOAD] Stream completed for ${file.originalName} in ${duration}ms`);
+        console.log(`[DOWNLOAD] Stream completed for ${file.originalName} in ${duration}ms (${bytesTransferred} bytes)`);
       });
 
       fileStream.on('error', async (error) => {
@@ -346,6 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!res.headersSent) {
           res.status(500).json({ error: "Download stream failed" });
         }
+        // Rollback if stream failed before completion
         if (!streamCompleted) {
           try {
             await storage.incrementDownloadCount(file.id, -1);
@@ -357,10 +400,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.destroy();
       });
 
+      // Handle client disconnect
+      res.on('close', async () => {
+        if (!streamCompleted && res.writableEnded === false) {
+          console.log(`[DOWNLOAD] Client disconnected before completion`);
+          try {
+            await storage.incrementDownloadCount(file.id, -1);
+            console.log(`[DOWNLOAD] Rolled back download count due to client disconnect`);
+          } catch (rollbackError) {
+            console.error(`[DOWNLOAD] Failed to rollback download count:`, rollbackError);
+          }
+        }
+      });
+
       fileStream.pipe(res);
 
       res.on('finish', async () => {
-        if (streamCompleted && (file.isOneTime || (file.maxDownloads && file.downloadCount >= file.maxDownloads))) {
+        if (streamCompleted && (file.isOneTime || (file.maxDownloads && currentDownloadCount >= file.maxDownloads))) {
           try {
             await storage.deleteFile(file.id);
             if (file.b2FileId) {
