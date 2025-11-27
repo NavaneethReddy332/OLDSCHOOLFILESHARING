@@ -4,12 +4,13 @@
 
 Your application needs these environment variables configured on Render to work properly:
 
-### 1. Backblaze B2 Credentials (REQUIRED for file uploads)
+### 1. IDrive E2 Credentials (REQUIRED for file uploads)
 ```
-B2_APPLICATION_KEY_ID=your_application_key_id
-B2_APPLICATION_KEY=your_application_key
-B2_BUCKET_ID=your_bucket_id
-B2_BUCKET_NAME=your_bucket_name
+IDRIVE_E2_ACCESS_KEY_ID=your_access_key_id
+IDRIVE_E2_SECRET_ACCESS_KEY=your_secret_access_key
+IDRIVE_E2_ENDPOINT=https://your-region.e2.cloudflarestorage.com
+IDRIVE_E2_BUCKET_NAME=your_bucket_name
+IDRIVE_E2_REGION=us-east-1
 ```
 
 **This is why you're getting 502 errors!** Without these variables, file uploads fail.
@@ -58,7 +59,7 @@ After setting the `DATABASE_URL`:
 
 The 502 errors you're experiencing are caused by:
 
-1. **Missing Backblaze credentials** - The upload endpoint fails when it can't connect to B2
+1. **Missing IDrive E2 credentials** - The upload endpoint fails when it can't connect to storage
 2. **Missing database connection** - The app can't store file metadata
 3. **Missing session secret** - Session management fails
 
@@ -68,14 +69,14 @@ After adding all environment variables, the 502 errors should be resolved.
 
 The application is configured to run on port 5000 (as seen in `server/index-dev.ts` and `server/index-prod.ts`). Render will automatically handle port mapping.
 
-## Getting Your Backblaze B2 Credentials
+## Getting Your IDrive E2 Credentials
 
-If you don't have Backblaze B2 set up:
+If you don't have IDrive E2 set up:
 
-1. Go to https://www.backblaze.com/b2/cloud-storage.html
-2. Create an account (they have a free tier)
-3. Create a bucket
-4. Generate an application key
+1. Go to https://www.idrive.com/e2/
+2. Create an account (they have a free tier with 10GB storage)
+3. Create a bucket in your preferred region
+4. Generate access keys from the dashboard
 5. Copy the credentials to Render's environment variables
 
 ## Verification
