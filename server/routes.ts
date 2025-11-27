@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { backblazeService } from "./backblaze";
+import { storageService } from "./idrive-e2";
 import { randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import { insertGuestbookEntrySchema } from "@shared/schema";
@@ -119,7 +119,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[UPLOAD] File size: ${(fileSize / 1024 / 1024).toFixed(2)}MB, using ${fileSize >= LARGE_FILE_THRESHOLD ? 'large file API' : 'standard upload'}`);
         
-        // Set up limit handler
         let fileTruncated = false;
         fileStream.on('limit', () => {
           fileTruncated = true;
@@ -129,11 +128,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-        let b2Upload;
+        let e2Upload;
         
         if (fileSize >= LARGE_FILE_THRESHOLD) {
-          // Use large file API for files >= 100MB
-          b2Upload = await backblazeService.uploadLargeFile(
+          e2Upload = await storageService.uploadLargeFile(
             fileStream,
             uniqueFileName,
             mimeType || 'application/octet-stream',
@@ -141,8 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             progressEmitter
           );
         } else {
-          // Use stream upload for files < 100MB
-          b2Upload = await backblazeService.uploadFileStream(
+          e2Upload = await storageService.uploadFileStream(
             fileStream,
             uniqueFileName,
             mimeType || 'application/octet-stream',
@@ -156,14 +153,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error('File size exceeds 1GB limit');
         }
 
-        // Validate uploaded size matches expected size
-        const uploadedBytes = b2Upload.uploadedBytes || 0;
+        const uploadedBytes = e2Upload.uploadedBytes || 0;
         const sizeTolerance = 1024; // 1KB tolerance for metadata
         if (Math.abs(uploadedBytes - fileSize) > sizeTolerance) {
           console.error(`[UPLOAD] Size mismatch: expected ${fileSize}, got ${uploadedBytes}`);
-          // Clean up the uploaded file from Backblaze
           try {
-            await backblazeService.deleteFile(uniqueFileName, b2Upload.fileId);
+            await storageService.deleteFile(uniqueFileName);
           } catch (cleanupError) {
             console.error('[UPLOAD] Failed to clean up mismatched file:', cleanupError);
           }
@@ -193,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isPasswordProtected,
           maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
           isOneTime: isOneTime === 'true' ? 1 : 0,
-          b2FileId: b2Upload.fileId,
+          b2FileId: e2Upload.fileKey,
         });
 
         uploadComplete = true;
@@ -390,13 +385,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.incrementDownloadCount(file.id);
       const currentDownloadCount = file.downloadCount + 1;
 
-      console.log(`[DOWNLOAD] Streaming file from Backblaze: ${file.filename}`);
+      console.log(`[DOWNLOAD] Streaming file from IDrive e2: ${file.filename}`);
       
       let fileStream;
       try {
-        fileStream = await backblazeService.downloadFileStream(file.filename);
+        fileStream = await storageService.downloadFileStream(file.filename);
       } catch (streamError) {
-        console.error(`[DOWNLOAD] Failed to get stream from Backblaze:`, streamError);
+        console.error(`[DOWNLOAD] Failed to get stream from IDrive e2:`, streamError);
         // Rollback download count if we can't get the stream
         await storage.incrementDownloadCount(file.id, -1);
         return res.status(500).json({ error: "Failed to retrieve file from storage" });
@@ -458,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             await storage.deleteFile(file.id);
             if (file.b2FileId) {
-              await backblazeService.deleteFile(file.filename, file.b2FileId);
+              await storageService.deleteFile(file.filename);
             }
             console.log(`[DOWNLOAD] File deleted after download: ${file.originalName}`);
           } catch (deleteError) {

@@ -68,7 +68,7 @@ export default function Home() {
           if (data.type === 'progress' && data.percent !== undefined) {
             const spinnerChars = ['|', '/', '-', '\\'];
             const spinnerIndex = Math.floor(Date.now() / 150) % spinnerChars.length;
-            updateLastLog(`UPLOADING TO BACKBLAZE  ${data.percent}% ${spinnerChars[spinnerIndex]}`);
+            updateLastLog(`UPLOADING TO CLOUD  ${data.percent}% ${spinnerChars[spinnerIndex]}`);
           } else if (data.type === 'complete') {
             if (eventSourceRef.current) {
               eventSourceRef.current.close();
@@ -124,7 +124,7 @@ export default function Home() {
               }
               const dots = '.'.repeat(10);
               updateLastLog(`STREAMING_TO_SERVER  ${percentComplete}%  ${dots}`);
-              addLog(`UPLOADING TO BACKBLAZE  0% /`);
+              addLog(`UPLOADING TO CLOUD  0% /`);
             }
           }
         });

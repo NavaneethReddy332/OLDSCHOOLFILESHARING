@@ -27,14 +27,15 @@ export function RetroLayout({ children }: RetroLayoutProps) {
             <span className="text-lg sm:text-xl font-retro tracking-widest transition-colors duration-300" style={{ color: 'var(--header-text)' }}>RETROSEND_V1.0</span>
           </div>
           
-          {/* Backblaze Logo Center */}
+          {/* IDrive e2 Logo Center */}
           <div className="hidden md:flex items-center justify-center flex-1">
-            <img 
-              src="/backblaze_logo.png"
-              alt="Backblaze"
-              className="h-8 sm:h-10 object-contain max-w-xs"
-              data-testid="img-backblaze-logo"
-            />
+            <span 
+              className="font-retro text-sm tracking-wider"
+              style={{ color: 'var(--header-text)' }}
+              data-testid="text-storage-provider"
+            >
+              Powered by IDrive e2
+            </span>
           </div>
           
           <div className="flex items-center gap-2 flex-1 justify-end">
