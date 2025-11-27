@@ -39,12 +39,14 @@ Preferred communication style: Simple, everyday language.
 - Development mode integrates Vite middleware for hot module replacement
 
 **File Upload & Storage**
-- Busboy for handling multipart/form-data file uploads with streaming support
+- **Direct browser uploads** to IDrive e2 using presigned URLs for improved performance
 - **IDrive e2 cloud storage** (S3-compatible) for production file storage
-- IDrive e2 service module (server/idrive-e2.ts) handles upload, download, and delete operations using AWS SDK
-- Supports files up to 1GB with large file multipart upload for files over 100MB
+- IDrive e2 service module (server/idrive-e2.ts) handles presigned URL generation, download, and delete operations
+- Two-step upload flow: presign → direct PUT to e2 → complete verification
+- Presigned URLs expire after 10 minutes for security
+- Server verifies upload integrity via HeadObject before persisting metadata
 - Random 6-digit code generation for file identification
-- Orphaned file prevention: e2 files deleted before database records
+- Orphaned file prevention: pending uploads cleaned after 15 minutes
 
 **Data Layer**
 - In-memory storage implementation (MemStorage) for development/testing
@@ -75,10 +77,15 @@ Preferred communication style: Simple, everyday language.
 ### API Structure
 
 **Endpoints**
-- `POST /api/upload` - Accepts file uploads via multipart form data, returns share code and file metadata
+- `POST /api/uploads/presign` - Generates presigned URL for direct browser upload to IDrive e2
   - Rate limited to 10 requests per 15 minutes per IP
   - Validates file types and blocks dangerous executables
-  - Validates and whitelists expiration times (1hr, 12hr, 24hr, 7 days)
+  - Returns uploadId, presigned URL, and file key
+- `POST /api/uploads/complete` - Verifies upload and creates database record
+  - Rate limited to 10 requests per 15 minutes per IP
+  - Verifies file size via HeadObject before persisting
+  - Returns share code and file metadata
+- `POST /api/uploads/abort` - Cleans up failed/cancelled uploads
 - `GET /api/file/:code` - Retrieves file metadata for display before download
   - Rate limited to 30 requests per 15 minutes per IP
 - `POST /api/verify-password` - Verifies password for protected files
