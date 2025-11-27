@@ -235,17 +235,28 @@ class IDriveE2Service {
   }
 }
 
-const idriveE2Config: IDriveE2Config = {
-  accessKeyId: process.env.IDRIVE_E2_ACCESS_KEY_ID || '',
-  secretAccessKey: process.env.IDRIVE_E2_SECRET_ACCESS_KEY || '',
-  endpoint: process.env.IDRIVE_E2_ENDPOINT || '',
-  bucketName: process.env.IDRIVE_E2_BUCKET_NAME || '',
-  region: process.env.IDRIVE_E2_REGION || 'us-east-1',
-};
+function validateConfig(): IDriveE2Config {
+  const config: IDriveE2Config = {
+    accessKeyId: process.env.IDRIVE_E2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.IDRIVE_E2_SECRET_ACCESS_KEY || '',
+    endpoint: process.env.IDRIVE_E2_ENDPOINT || '',
+    bucketName: process.env.IDRIVE_E2_BUCKET_NAME || '',
+    region: process.env.IDRIVE_E2_REGION || 'us-east-1',
+  };
 
-if (!idriveE2Config.accessKeyId || !idriveE2Config.secretAccessKey || 
-    !idriveE2Config.endpoint || !idriveE2Config.bucketName) {
-  console.warn('IDrive e2 credentials not configured. File uploads will fail.');
+  const missingVars: string[] = [];
+  if (!config.accessKeyId) missingVars.push('IDRIVE_E2_ACCESS_KEY_ID');
+  if (!config.secretAccessKey) missingVars.push('IDRIVE_E2_SECRET_ACCESS_KEY');
+  if (!config.endpoint) missingVars.push('IDRIVE_E2_ENDPOINT');
+  if (!config.bucketName) missingVars.push('IDRIVE_E2_BUCKET_NAME');
+
+  if (missingVars.length > 0) {
+    console.warn(`IDrive e2 credentials not configured. Missing: ${missingVars.join(', ')}. File uploads will fail.`);
+  }
+
+  return config;
 }
+
+const idriveE2Config = validateConfig();
 
 export const storageService = new IDriveE2Service(idriveE2Config);

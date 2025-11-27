@@ -1,6 +1,6 @@
 import { type User, type InsertUser, type File, type InsertFile, type GuestbookEntry, type InsertGuestbookEntry } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { backblazeService } from "./backblaze";
+import { storageService } from "./idrive-e2";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -79,10 +79,10 @@ export class MemStorage implements IStorage {
     if (file.expiresAt <= new Date()) {
       try {
         if (file.b2FileId) {
-          await backblazeService.deleteFile(file.filename, file.b2FileId);
+          await storageService.deleteFile(file.filename);
         }
       } catch (error) {
-        console.error(`Failed to delete expired file ${file.filename} from Backblaze:`, error);
+        console.error(`Failed to delete expired file ${file.filename} from IDrive e2:`, error);
       }
       this.deleteFile(file.id);
       return undefined;
@@ -106,10 +106,10 @@ export class MemStorage implements IStorage {
       if (file.expiresAt <= now) {
         try {
           if (file.b2FileId) {
-            await backblazeService.deleteFile(file.filename, file.b2FileId);
+            await storageService.deleteFile(file.filename);
           }
         } catch (error) {
-          console.error(`Failed to delete file ${file.filename} from Backblaze:`, error);
+          console.error(`Failed to delete file ${file.filename} from IDrive e2:`, error);
         }
         this.deleteFile(id);
       }

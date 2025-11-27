@@ -39,13 +39,12 @@ Preferred communication style: Simple, everyday language.
 - Development mode integrates Vite middleware for hot module replacement
 
 **File Upload & Storage**
-- Multer middleware for handling multipart/form-data file uploads
-- **Backblaze B2 cloud storage** for production file storage (replaced local file system)
-- Backblaze service module (server/backblaze.ts) handles upload, download, and delete operations
-- Automatic token reauthorization with retry logic for long-lived processes
-- 50MB file size limit enforced at the middleware level
+- Busboy for handling multipart/form-data file uploads with streaming support
+- **IDrive e2 cloud storage** (S3-compatible) for production file storage
+- IDrive e2 service module (server/idrive-e2.ts) handles upload, download, and delete operations using AWS SDK
+- Supports files up to 1GB with large file multipart upload for files over 100MB
 - Random 6-digit code generation for file identification
-- Orphaned file prevention: B2 files deleted before database records
+- Orphaned file prevention: e2 files deleted before database records
 
 **Data Layer**
 - In-memory storage implementation (MemStorage) for development/testing
@@ -65,7 +64,7 @@ Preferred communication style: Simple, everyday language.
 - Unique 6-digit codes for file retrieval
 - Original filename preservation alongside system-generated unique filenames
 - File metadata: size, MIME type
-- **b2FileId field** for tracking cloud storage files in Backblaze B2
+- **b2FileId field** for tracking cloud storage files in IDrive e2 (S3 key)
 - Timestamp tracking: uploadedAt, expiresAt (24-hour expiration window)
 - UUID primary keys with PostgreSQL's gen_random_uuid()
 
@@ -128,9 +127,9 @@ Preferred communication style: Simple, everyday language.
 - Configured via DATABASE_URL environment variable
 
 **Cloud Storage**
-- Backblaze B2 (backblaze-b2) - Cloud object storage for file uploads
-- Configured via B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET_ID, and B2_BUCKET_NAME secrets
-- Automatic token reauthorization and retry logic for production reliability
+- IDrive e2 (S3-compatible) - Cloud object storage for file uploads
+- Uses AWS SDK (@aws-sdk/client-s3, @aws-sdk/lib-storage) for S3-compatible API
+- Configured via IDRIVE_E2_ACCESS_KEY_ID, IDRIVE_E2_SECRET_ACCESS_KEY, IDRIVE_E2_ENDPOINT, IDRIVE_E2_BUCKET_NAME, and IDRIVE_E2_REGION secrets
 - Orphaned file prevention through coordinated deletion
 
 **Replit Platform Integration**
@@ -148,8 +147,9 @@ Preferred communication style: Simple, everyday language.
 - vite - Build tool and dev server
 
 **File Handling**
-- multer - Multipart form data and file upload handling
-- backblaze-b2 - Cloud storage SDK for Backblaze B2
+- busboy - Streaming multipart form data and file upload handling
+- @aws-sdk/client-s3 - AWS SDK for S3-compatible cloud storage (IDrive e2)
+- @aws-sdk/lib-storage - High-level upload utilities with multipart support
 
 **UI Components**
 - @radix-ui/* - Accessible component primitives (30+ packages)
