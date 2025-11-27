@@ -5,8 +5,6 @@ import { storageService } from "./idrive-e2";
 import { randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import { insertGuestbookEntrySchema } from "@shared/schema";
-import Busboy from "busboy";
-import { EventEmitter } from "events";
 import { 
   passwordVerificationLimiter, 
   downloadLimiter, 
@@ -16,214 +14,185 @@ import {
 import { validateFile } from "./middleware/fileValidation";
 import { validateExpirationHours } from "./middleware/expirationValidator";
 
-const uploadProgressEmitters = new Map<string, EventEmitter>();
+interface PendingUpload {
+  uploadId: string;
+  fileKey: string;
+  originalName: string;
+  size: number;
+  mimetype: string;
+  expiresInHours: number;
+  password?: string;
+  maxDownloads?: number;
+  isOneTime: boolean;
+  createdAt: Date;
+}
+
+const pendingUploads = new Map<string, PendingUpload>();
+
+setInterval(() => {
+  const now = Date.now();
+  Array.from(pendingUploads.entries()).forEach(([uploadId, upload]) => {
+    if (now - upload.createdAt.getTime() > 15 * 60 * 1000) {
+      pendingUploads.delete(uploadId);
+      storageService.deleteFile(upload.fileKey).catch(() => {});
+    }
+  });
+}, 60000);
 
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  app.get("/api/upload-progress/:uploadId", (req, res) => {
-    const { uploadId } = req.params;
-    
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    
-    res.write('data: {"type":"connected"}\n\n');
-    
-    const emitter = new EventEmitter();
-    uploadProgressEmitters.set(uploadId, emitter);
-    
-    const progressListener = (data: any) => {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-    };
-    
-    emitter.on('progress', progressListener);
-    
-    req.on('close', () => {
-      emitter.off('progress', progressListener);
-      uploadProgressEmitters.delete(uploadId);
-    });
+  app.post("/api/uploads/presign", uploadLimiter, async (req, res) => {
+    try {
+      const { filename, size, mimetype, expiresIn, password, maxDownloads, isOneTime } = req.body;
+
+      if (!filename || !size || !mimetype) {
+        return res.status(400).json({ error: "Missing required fields: filename, size, mimetype" });
+      }
+
+      if (!storageService.isConfigured()) {
+        return res.status(503).json({ error: "Storage service not configured" });
+      }
+
+      const validation = validateFile(filename, mimetype, size);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
+
+      const expiresInHours = validateExpirationHours(expiresIn);
+      const uploadId = randomBytes(16).toString('hex');
+      const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${filename}`;
+
+      const { uploadUrl, fileKey } = await storageService.generatePresignedUploadUrl(
+        uniqueFileName,
+        mimetype,
+        600
+      );
+
+      pendingUploads.set(uploadId, {
+        uploadId,
+        fileKey,
+        originalName: filename,
+        size,
+        mimetype,
+        expiresInHours,
+        password: password || undefined,
+        maxDownloads: maxDownloads ? parseInt(maxDownloads) : undefined,
+        isOneTime: isOneTime === true || isOneTime === 'true',
+        createdAt: new Date(),
+      });
+
+      console.log(`[PRESIGN] Generated presigned URL for ${filename}, uploadId: ${uploadId}`);
+
+      res.json({
+        uploadId,
+        uploadUrl,
+        fileKey,
+      });
+    } catch (error: any) {
+      console.error("[PRESIGN] Error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate presigned URL" });
+    }
   });
 
-  app.post("/api/upload", uploadLimiter, async (req, res) => {
-    const startTime = Date.now();
-    const uploadId = req.query.uploadId as string || randomBytes(16).toString('hex');
-    const progressEmitter = uploadProgressEmitters.get(uploadId);
-    
-    const busboy = Busboy({ 
-      headers: req.headers,
-      limits: {
-        fileSize: 1024 * 1024 * 1024,
+  app.post("/api/uploads/complete", uploadLimiter, async (req, res) => {
+    try {
+      const { uploadId } = req.body;
+
+      if (!uploadId) {
+        return res.status(400).json({ error: "Missing uploadId" });
       }
-    });
-    
-    let uploadComplete = false;
-    const formFields: Record<string, string> = {};
-    
-    busboy.on('field', (fieldname, value) => {
-      formFields[fieldname] = value;
-    });
-    
-    busboy.on('file', async (fieldname, fileStream, info) => {
-      try {
-        const { filename, encoding, mimeType } = info;
-        
-        // Get file size from form fields (sent by client)
-        const fileSize = parseInt(formFields.fileSize || '0');
-        const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024; // 100MB
-        
-        if (!fileSize || fileSize <= 0) {
-          if (progressEmitter) {
-            progressEmitter.emit('progress', { 
-              type: 'error', 
-              error: 'Invalid file size' 
-            });
-          }
-          fileStream.resume();
-          res.status(400).json({ error: 'File size must be provided' });
-          return;
-        }
-        
-        // Validate file before processing
-        const validation = validateFile(filename, mimeType || 'application/octet-stream', fileSize);
-        
-        if (!validation.valid) {
-          if (progressEmitter) {
-            progressEmitter.emit('progress', { 
-              type: 'error', 
-              error: validation.error 
-            });
-          }
-          fileStream.resume(); // Drain the stream
-          res.status(400).json({ error: validation.error });
-          return;
-        }
-        
-        let code = generateCode();
-        let existingFile = await storage.getFileByCode(code);
-        
-        while (existingFile) {
-          code = generateCode();
-          existingFile = await storage.getFileByCode(code);
-        }
 
-        // Validate and sanitize expiration time (whitelist only allowed values)
-        const expiresInHours = validateExpirationHours(formFields.expiresIn);
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + expiresInHours);
-
-        const uniqueFileName = `${Date.now()}-${randomBytes(8).toString('hex')}-${filename}`;
-        
-        console.log(`[UPLOAD] File size: ${(fileSize / 1024 / 1024).toFixed(2)}MB, using ${fileSize >= LARGE_FILE_THRESHOLD ? 'large file API' : 'standard upload'}`);
-        
-        let fileTruncated = false;
-        fileStream.on('limit', () => {
-          fileTruncated = true;
-          console.error(`[UPLOAD] File size limit exceeded: ${filename}`);
-          if (progressEmitter) {
-            progressEmitter.emit('progress', { type: 'error', error: 'File size exceeds 1GB limit' });
-          }
-        });
-        
-        let e2Upload;
-        
-        if (fileSize >= LARGE_FILE_THRESHOLD) {
-          e2Upload = await storageService.uploadLargeFile(
-            fileStream,
-            uniqueFileName,
-            mimeType || 'application/octet-stream',
-            fileSize,
-            progressEmitter
-          );
-        } else {
-          e2Upload = await storageService.uploadFileStream(
-            fileStream,
-            uniqueFileName,
-            mimeType || 'application/octet-stream',
-            fileSize,
-            progressEmitter
-          );
-        }
-        
-        // Check if file was truncated during upload
-        if (fileTruncated) {
-          throw new Error('File size exceeds 1GB limit');
-        }
-
-        const uploadedBytes = e2Upload.uploadedBytes || 0;
-        const sizeTolerance = 1024; // 1KB tolerance for metadata
-        if (Math.abs(uploadedBytes - fileSize) > sizeTolerance) {
-          console.error(`[UPLOAD] Size mismatch: expected ${fileSize}, got ${uploadedBytes}`);
-          try {
-            await storageService.deleteFile(uniqueFileName);
-          } catch (cleanupError) {
-            console.error('[UPLOAD] Failed to clean up mismatched file:', cleanupError);
-          }
-          throw new Error(`File size mismatch: expected ${fileSize} bytes, but ${uploadedBytes} bytes were uploaded`);
-        }
-
-        console.log(`[UPLOAD] Upload successful: ${(uploadedBytes / 1024 / 1024).toFixed(2)}MB uploaded`);
-
-        const { password, maxDownloads, isOneTime } = formFields;
-        
-        let passwordHash = null;
-        let isPasswordProtected = 0;
-        
-        if (password && password.trim() !== "") {
-          passwordHash = await bcrypt.hash(password, 10);
-          isPasswordProtected = 1;
-        }
-
-        const dbFile = await storage.createFile({
-          code,
-          filename: uniqueFileName,
-          originalName: filename,
-          size: fileSize,
-          mimetype: mimeType,
-          expiresAt,
-          passwordHash,
-          isPasswordProtected,
-          maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
-          isOneTime: isOneTime === 'true' ? 1 : 0,
-          b2FileId: e2Upload.fileKey,
-        });
-
-        uploadComplete = true;
-        res.json({
-          code: dbFile.code,
-          originalName: dbFile.originalName,
-          size: dbFile.size,
-          expiresAt: dbFile.expiresAt,
-          isPasswordProtected: dbFile.isPasswordProtected,
-          maxDownloads: dbFile.maxDownloads,
-          isOneTime: dbFile.isOneTime,
-        });
-      } catch (error: any) {
-        if (!uploadComplete) {
-          console.error(`[UPLOAD] Failed:`, error.message);
-          
-          const errorMessage = error.message || "Upload failed";
-          const statusCode = error.message?.includes('1GB limit') ? 413 : 500;
-          
-          res.status(statusCode).json({ 
-            error: errorMessage,
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-          });
-        }
+      const pendingUpload = pendingUploads.get(uploadId);
+      if (!pendingUpload) {
+        return res.status(404).json({ error: "Upload not found or expired" });
       }
-    });
 
-    busboy.on('error', (error: any) => {
-      console.error('[UPLOAD] Busboy error:', error);
-      if (!uploadComplete) {
-        res.status(500).json({ error: "Upload stream error" });
+      const { verified, actualSize } = await storageService.verifyUpload(
+        pendingUpload.fileKey,
+        pendingUpload.size
+      );
+
+      if (!verified) {
+        pendingUploads.delete(uploadId);
+        await storageService.deleteFile(pendingUpload.fileKey).catch(() => {});
+        return res.status(400).json({ 
+          error: `File verification failed. Expected ${pendingUpload.size} bytes, found ${actualSize} bytes` 
+        });
       }
-    });
 
-    req.pipe(busboy);
+      let code = generateCode();
+      let existingFile = await storage.getFileByCode(code);
+      while (existingFile) {
+        code = generateCode();
+        existingFile = await storage.getFileByCode(code);
+      }
+
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + pendingUpload.expiresInHours);
+
+      let passwordHash = null;
+      let isPasswordProtected = 0;
+      if (pendingUpload.password && pendingUpload.password.trim() !== "") {
+        passwordHash = await bcrypt.hash(pendingUpload.password, 10);
+        isPasswordProtected = 1;
+      }
+
+      const dbFile = await storage.createFile({
+        code,
+        filename: pendingUpload.fileKey,
+        originalName: pendingUpload.originalName,
+        size: pendingUpload.size,
+        mimetype: pendingUpload.mimetype,
+        expiresAt,
+        passwordHash,
+        isPasswordProtected,
+        maxDownloads: pendingUpload.maxDownloads || null,
+        isOneTime: pendingUpload.isOneTime ? 1 : 0,
+        b2FileId: pendingUpload.fileKey,
+      });
+
+      pendingUploads.delete(uploadId);
+
+      console.log(`[COMPLETE] Upload complete for ${pendingUpload.originalName}, code: ${code}`);
+
+      res.json({
+        code: dbFile.code,
+        originalName: dbFile.originalName,
+        size: dbFile.size,
+        expiresAt: dbFile.expiresAt,
+        isPasswordProtected: dbFile.isPasswordProtected,
+        maxDownloads: dbFile.maxDownloads,
+        isOneTime: dbFile.isOneTime,
+      });
+    } catch (error: any) {
+      console.error("[COMPLETE] Error:", error);
+      res.status(500).json({ error: error.message || "Failed to complete upload" });
+    }
+  });
+
+  app.post("/api/uploads/abort", async (req, res) => {
+    try {
+      const { uploadId } = req.body;
+
+      if (!uploadId) {
+        return res.status(400).json({ error: "Missing uploadId" });
+      }
+
+      const pendingUpload = pendingUploads.get(uploadId);
+      if (pendingUpload) {
+        pendingUploads.delete(uploadId);
+        await storageService.deleteFile(pendingUpload.fileKey).catch(() => {});
+        console.log(`[ABORT] Upload aborted for uploadId: ${uploadId}`);
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[ABORT] Error:", error);
+      res.status(500).json({ error: error.message || "Failed to abort upload" });
+    }
   });
 
   app.get("/api/file/:code", codeLookupLimiter, async (req, res) => {

@@ -17,23 +17,13 @@ export default function Home() {
   const { toast } = useToast();
   const lastProgressRef = useRef<number>(0);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
-  const cloudUploadIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const streamingSpinnerRef = useRef<NodeJS.Timeout | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     return () => {
-      if (cloudUploadIntervalRef.current) {
-        clearInterval(cloudUploadIntervalRef.current);
-        cloudUploadIntervalRef.current = null;
-      }
       if (streamingSpinnerRef.current) {
         clearInterval(streamingSpinnerRef.current);
         streamingSpinnerRef.current = null;
-      }
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
       }
     };
   }, []);
@@ -47,6 +37,8 @@ export default function Home() {
     }
   };
 
+  const currentUploadIdRef = useRef<string | null>(null);
+
   const handleUpload = async () => {
     if (!file || isUploading) return;
     
@@ -57,150 +49,114 @@ export default function Home() {
       addLog(`INITIATING_UPLOAD: ${file.name}...`);
       addLog(`FILE_SIZE: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
       
-      const uploadId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      
-      const eventSource = new EventSource(`/api/upload-progress/${uploadId}`);
-      eventSourceRef.current = eventSource;
-      
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'progress' && data.percent !== undefined) {
-            const spinnerChars = ['|', '/', '-', '\\'];
-            const spinnerIndex = Math.floor(Date.now() / 150) % spinnerChars.length;
-            updateLastLog(`UPLOADING TO CLOUD  ${data.percent}% ${spinnerChars[spinnerIndex]}`);
-          } else if (data.type === 'complete') {
-            if (eventSourceRef.current) {
-              eventSourceRef.current.close();
-              eventSourceRef.current = null;
-            }
-          } else if (data.type === 'error') {
-            if (eventSourceRef.current) {
-              eventSourceRef.current.close();
-              eventSourceRef.current = null;
-            }
-          }
-        } catch (error) {
-          console.error('Error parsing SSE message:', error);
-        }
-      };
+      addLog(`REQUESTING_UPLOAD_URL...`);
+      const presignResponse = await fetch('/api/uploads/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          size: file.size,
+          mimetype: file.type || 'application/octet-stream',
+          expiresIn,
+          password: password || undefined,
+          maxDownloads: maxDownloads || undefined,
+          isOneTime,
+        }),
+      });
+
+      if (!presignResponse.ok) {
+        const errorData = await presignResponse.json();
+        throw new Error(errorData.error || 'Failed to get upload URL');
+      }
+
+      const { uploadId, uploadUrl } = await presignResponse.json();
+      currentUploadIdRef.current = uploadId;
+      addLog(`UPLOAD_URL_RECEIVED`);
       
       const spinnerChars = ['|', '/', '-', '\\'];
       let spinnerIndex = 0;
-      addLog(`STREAMING_TO_SERVER  0%  ////////// ${spinnerChars[0]}`);
+      addLog(`UPLOADING_TO_CLOUD  0%  ////////// ${spinnerChars[0]}`);
       
       streamingSpinnerRef.current = setInterval(() => {
         spinnerIndex = (spinnerIndex + 1) % spinnerChars.length;
         const percentComplete = lastProgressRef.current;
         const dots = '.'.repeat(Math.floor(percentComplete / 10));
         const spaces = '/'.repeat(10 - Math.floor(percentComplete / 10));
-        updateLastLog(`STREAMING_TO_SERVER  ${percentComplete}%  ${dots}${spaces} ${spinnerChars[spinnerIndex]}`);
+        updateLastLog(`UPLOADING_TO_CLOUD  ${percentComplete}%  ${dots}${spaces} ${spinnerChars[spinnerIndex]}`);
       }, 150);
 
-      const formData = new FormData();
-      formData.append('fileSize', file.size.toString());
-      if (password) formData.append('password', password);
-      if (maxDownloads) formData.append('maxDownloads', maxDownloads);
-      if (isOneTime) formData.append('isOneTime', 'true');
-      formData.append('expiresIn', expiresIn); // hours
-      formData.append('file', file);
-
-      const data = await new Promise<any>((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhrRef.current = xhr;
 
         xhr.upload.addEventListener('progress', (event) => {
           if (event.lengthComputable) {
             const percentComplete = Math.round((event.loaded / event.total) * 100);
-            
             if (percentComplete !== lastProgressRef.current) {
               lastProgressRef.current = percentComplete;
-            }
-            
-            if (percentComplete === 100) {
-              if (streamingSpinnerRef.current) {
-                clearInterval(streamingSpinnerRef.current);
-                streamingSpinnerRef.current = null;
-              }
-              const dots = '.'.repeat(10);
-              updateLastLog(`STREAMING_TO_SERVER  ${percentComplete}%  ${dots}`);
-              addLog(`UPLOADING TO CLOUD  0% /`);
             }
           }
         });
 
         xhr.addEventListener('load', () => {
-          if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-            eventSourceRef.current = null;
-          }
-          if (cloudUploadIntervalRef.current) {
-            clearInterval(cloudUploadIntervalRef.current);
-            cloudUploadIntervalRef.current = null;
+          if (streamingSpinnerRef.current) {
+            clearInterval(streamingSpinnerRef.current);
+            streamingSpinnerRef.current = null;
           }
           if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              updateLastLog(`UPLOAD_COMPLETE: 100%`);
-              console.log('Upload successful, response:', response);
-              resolve(response);
-            } catch (error) {
-              console.error('Error parsing response:', error, 'Response:', xhr.responseText);
-              reject(new Error('Invalid server response'));
-            }
+            const dots = '.'.repeat(10);
+            updateLastLog(`UPLOADING_TO_CLOUD  100%  ${dots}`);
+            resolve();
           } else {
-            console.error('Upload failed:', xhr.status, xhr.responseText);
-            addLog(`ERROR: UPLOAD_FAILED - ${xhr.status}`, 'error');
-            try {
-              const errorResponse = JSON.parse(xhr.responseText);
-              reject(new Error(errorResponse.error || `Upload failed: ${xhr.status}`));
-            } catch {
-              reject(new Error(`Upload failed: ${xhr.status}`));
-            }
+            console.error('Direct upload failed:', xhr.status, xhr.responseText);
+            reject(new Error(`Direct upload failed: ${xhr.status}`));
           }
         });
 
-        xhr.addEventListener('error', (e) => {
-          if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-            eventSourceRef.current = null;
+        xhr.addEventListener('error', () => {
+          if (streamingSpinnerRef.current) {
+            clearInterval(streamingSpinnerRef.current);
+            streamingSpinnerRef.current = null;
           }
-          if (cloudUploadIntervalRef.current) {
-            clearInterval(cloudUploadIntervalRef.current);
-            cloudUploadIntervalRef.current = null;
-          }
-          console.error('Upload network error:', e);
-          reject(new Error('Network error'));
+          reject(new Error('Network error during direct upload'));
         });
 
         xhr.addEventListener('abort', () => {
-          if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-            eventSourceRef.current = null;
-          }
-          if (cloudUploadIntervalRef.current) {
-            clearInterval(cloudUploadIntervalRef.current);
-            cloudUploadIntervalRef.current = null;
+          if (streamingSpinnerRef.current) {
+            clearInterval(streamingSpinnerRef.current);
+            streamingSpinnerRef.current = null;
           }
           reject(new Error('Upload cancelled'));
         });
 
         xhr.addEventListener('timeout', () => {
-          if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-            eventSourceRef.current = null;
-          }
-          if (cloudUploadIntervalRef.current) {
-            clearInterval(cloudUploadIntervalRef.current);
-            cloudUploadIntervalRef.current = null;
+          if (streamingSpinnerRef.current) {
+            clearInterval(streamingSpinnerRef.current);
+            streamingSpinnerRef.current = null;
           }
           reject(new Error('Upload timeout'));
         });
 
-        xhr.open('POST', `/api/upload?uploadId=${uploadId}`);
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
         xhr.timeout = 600000;
-        xhr.send(formData);
+        xhr.send(file);
       });
+
+      addLog(`FINALIZING_UPLOAD...`);
+      const completeResponse = await fetch('/api/uploads/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploadId }),
+      });
+
+      if (!completeResponse.ok) {
+        const errorData = await completeResponse.json();
+        throw new Error(errorData.error || 'Failed to complete upload');
+      }
+
+      const data = await completeResponse.json();
+      currentUploadIdRef.current = null;
 
       addLog(`PROCESSING_COMPLETE`);
       if (password) addLog(`PASSWORD_PROTECTED`);
@@ -218,6 +174,15 @@ export default function Home() {
       console.error('Upload error:', error);
       setIsUploading(false);
       xhrRef.current = null;
+      
+      if (currentUploadIdRef.current) {
+        fetch('/api/uploads/abort', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uploadId: currentUploadIdRef.current }),
+        }).catch(() => {});
+        currentUploadIdRef.current = null;
+      }
       
       if (error.message?.includes('cancelled')) {
         addLog(`UPLOAD_CANCELLED`, 'error');

@@ -9,6 +9,7 @@ import {
   CompleteMultipartUploadCommand,
   AbortMultipartUploadCommand
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
@@ -232,6 +233,61 @@ class IDriveE2Service {
 
   getDownloadUrl(fileName: string): string {
     return `${this.config.endpoint}/${this.config.bucketName}/${fileName}`;
+  }
+
+  async generatePresignedUploadUrl(
+    fileName: string,
+    contentType: string,
+    expiresIn: number = 600
+  ): Promise<{ uploadUrl: string; fileKey: string }> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.config.bucketName,
+        Key: fileName,
+        ContentType: contentType,
+      });
+
+      const uploadUrl = await getSignedUrl(this.client, command, { expiresIn });
+
+      return {
+        uploadUrl,
+        fileKey: fileName,
+      };
+    } catch (error: any) {
+      console.error('IDrive e2 presign error:', error);
+      throw new Error('Failed to generate presigned upload URL');
+    }
+  }
+
+  async verifyUpload(fileName: string, expectedSize: number): Promise<{ verified: boolean; actualSize: number }> {
+    try {
+      const info = await this.getFileInfo(fileName);
+      const actualSize = info.contentLength || 0;
+      const sizeTolerance = 1024;
+      const verified = Math.abs(actualSize - expectedSize) <= sizeTolerance;
+      
+      return { verified, actualSize };
+    } catch (error: any) {
+      console.error('IDrive e2 verify error:', error);
+      return { verified: false, actualSize: 0 };
+    }
+  }
+
+  isConfigured(): boolean {
+    return !!(
+      this.config.accessKeyId &&
+      this.config.secretAccessKey &&
+      this.config.endpoint &&
+      this.config.bucketName
+    );
+  }
+
+  getBucketName(): string {
+    return this.config.bucketName;
+  }
+
+  getEndpoint(): string {
+    return this.config.endpoint;
   }
 }
 
